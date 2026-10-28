@@ -1,0 +1,4436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>外地分子公司运营季报 · 可视化看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg-start:#eef4fb;
+    --bg-end:#dde8f5;
+    --card:#ffffff;
+    --card-soft:#f6faff;
+    --primary:#0080ff;
+    --primary-light:#3b9eff;
+    --primary-dark:#0066cc;
+    --primary-gradient:linear-gradient(135deg,#0080ff 0%,#3b9eff 100%);
+    --header-gradient:linear-gradient(90deg,#1e5fbf 0%,#0080ff 100%);
+    --sidebar-gradient:linear-gradient(180deg,#0f1f4d 0%,#1e3a8a 60%,#1e40af 100%);
+    /* 各模块主题色 */
+    --c-overview:#0080ff;
+    --c-personnel:#06b6d4;
+    --c-financial:#6366f1;
+    --c-capacity:#fb923c;
+    --c-performance:#a855f7;
+    --c-workhours:#22c55e;
+    --c-culture:#ec4899;
+    --c-suggest:#f59e0b;
+    --text-main:#1e293b;
+    --text-sub:#64748b;
+    --text-light:#94a3b8;
+    --border:#dce7f3;
+    --shadow-sm:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+    --shadow-md:0 4px 12px rgba(15,23,42,.08),0 2px 4px rgba(15,23,42,.04);
+    --shadow-lg:0 12px 32px rgba(15,23,42,.12),0 4px 8px rgba(15,23,42,.06);
+    --radius:14px;
+    --radius-sm:10px;
+    --sidebar-w:210px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+    background:linear-gradient(135deg,var(--bg-start) 0%,var(--bg-end) 100%);
+    color:var(--text-main);
+    min-height:100vh;
+    line-height:1.6;
+  }
+
+  /* ===== 左侧固定导航栏 ===== */
+  .sidebar{
+    position:fixed;
+    left:0;top:0;bottom:0;
+    width:var(--sidebar-w);
+    background:var(--sidebar-gradient);
+    z-index:100;
+    display:flex;flex-direction:column;
+    box-shadow:4px 0 24px rgba(0,30,80,.25);
+    border-right:1px solid rgba(0,128,255,.2);
+  }
+  .sidebar::before{
+    content:"";position:absolute;right:0;top:0;bottom:0;width:2px;
+    background:linear-gradient(180deg,transparent 0%,#0080ff 30%,#3b9eff 70%,transparent 100%);
+  }
+  .sidebar-logo{
+    padding:22px 20px 18px;
+    display:flex;align-items:center;gap:12px;
+    border-bottom:1px solid rgba(255,255,255,.10);
+  }
+  .sidebar-logo .logo-box{
+    width:42px;height:42px;
+    background:linear-gradient(135deg,#0080ff 0%,#3b9eff 100%);
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+    box-shadow:0 4px 12px rgba(0,128,255,.45);
+  }
+  .sidebar-logo .logo-text h1{font-size:15px;font-weight:700;color:#fff;line-height:1.3;}
+  .sidebar-logo .logo-text p{font-size:11px;color:#7dc5ff;margin-top:2px;}
+
+  .sidebar-search{
+    padding:14px 16px 8px;
+  }
+  .sidebar-search input{
+    width:100%;padding:8px 12px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:8px;color:#fff;font-size:12px;
+    font-family:inherit;outline:none;
+    transition:all .2s;
+  }
+  .sidebar-search input::placeholder{color:#94a3b8;}
+  .sidebar-search input:focus{background:rgba(255,255,255,.15);border-color:#3b9eff;}
+
+  .sidebar-nav{
+    flex:1;overflow-y:auto;padding:8px 12px;
+    display:flex;flex-direction:column;gap:3px;
+  }
+  .sidebar-nav::-webkit-scrollbar{width:4px;}
+  .sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px;}
+  .sidebar-nav .nav-section-title{
+    font-size:10px;color:#7dc5ff;
+    padding:14px 10px 6px;
+    font-weight:700;letter-spacing:1.5px;
+  }
+  .sidebar-nav a{
+    display:flex;align-items:center;gap:11px;
+    padding:10px 12px;
+    border-radius:8px;
+    text-decoration:none;
+    color:#cbd5e1;
+    font-size:13px;font-weight:500;
+    transition:all .2s;
+    cursor:pointer;
+    position:relative;
+    border-left:3px solid transparent;
+  }
+  .sidebar-nav a .icon{
+    width:20px;height:20px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;flex-shrink:0;
+  }
+  .sidebar-nav a:hover{
+    background:rgba(0,128,255,.15);
+    color:#fff;
+  }
+  .sidebar-nav a.active{
+    background:linear-gradient(90deg,rgba(0,128,255,.30) 0%,rgba(0,128,255,.10) 100%);
+    color:#fff;
+    border-left-color:#3b9eff;
+    box-shadow:inset 0 0 0 1px rgba(0,128,255,.20);
+  }
+  .sidebar-nav a.active::after{
+    content:"";position:absolute;right:8px;
+    width:6px;height:6px;border-radius:50%;
+    background:#3b9eff;box-shadow:0 0 8px #3b9eff;
+  }
+
+  .sidebar-footer{
+    padding:12px;border-top:1px solid rgba(255,255,255,.10);
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .sidebar-footer .sb-btn{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 12px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:8px;
+    color:#cbd5e1;font-size:12px;font-weight:600;
+    cursor:pointer;transition:all .2s;
+    font-family:inherit;text-align:left;
+  }
+  .sidebar-footer .sb-btn:hover{background:rgba(0,128,255,.20);color:#fff;border-color:#3b9eff;}
+  .sidebar-footer .sb-btn .icon{font-size:14px;}
+
+  /* ===== 顶部头部 ===== */
+  .header{
+    background:var(--header-gradient);
+    color:#fff;
+    padding:18px 32px 18px 32px;
+    position:sticky;top:0;z-index:50;
+    box-shadow:0 6px 18px rgba(0,128,255,.18);
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:14px;
+    border-bottom:3px solid #0066cc;
+    margin-left:var(--sidebar-w);
+  }
+  .header::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:6px;
+    background:linear-gradient(180deg,#a8e0ff 0%,#0080ff 50%,#0066cc 100%);
+  }
+  .header-left{display:flex;align-items:center;gap:14px;padding-left:6px;}
+  .header-title h1{font-size:21px;font-weight:700;letter-spacing:1px;}
+  .header-title p{font-size:12px;opacity:.92;margin-top:2px;}
+  .header-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn{
+    padding:9px 18px;border:none;border-radius:8px;
+    font-size:13px;font-weight:600;cursor:pointer;
+    transition:all .2s;display:inline-flex;align-items:center;gap:6px;
+    font-family:inherit;
+  }
+  .btn-light{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.30);}
+  .btn-light:hover{background:rgba(255,255,255,.32);transform:translateY(-1px);}
+  .btn-primary{background:#fff;color:#0080ff;box-shadow:0 2px 6px rgba(0,0,0,.1);}
+  .btn-primary:hover{background:#f0f7ff;transform:translateY(-1px);}
+  .btn-ghost{background:#fff;color:#0066cc;border:1px solid #b9d8ff;}
+  .btn-ghost:hover{background:#f0f7ff;border-color:#0080ff;}
+  .btn-sm{padding:6px 12px;font-size:12px;}
+
+  /* ===== 主内容 ===== */
+  .main{padding:24px 32px 60px;margin-left:var(--sidebar-w);max-width:1700px;}
+
+  /* ===== KPI 概览 - 一行6个 ===== */
+  .kpi-overview-grid{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:14px;
+    margin-bottom:24px;
+  }
+  .kpi-card{
+    background:#fff;border-radius:var(--radius);
+    padding:18px 16px;box-shadow:var(--shadow-sm);
+    position:relative;overflow:hidden;transition:all .3s;
+    border:1px solid var(--border);
+    border-top:3px solid var(--c-overview);
+  }
+  .kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
+  .kpi-card .kpi-icon{
+    position:absolute;right:12px;top:12px;
+    width:34px;height:34px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;
+  }
+  .kpi-label{font-size:12px;color:var(--text-sub);margin-bottom:8px;font-weight:600;}
+  .kpi-value{font-size:26px;font-weight:700;color:var(--primary-dark);line-height:1.2;letter-spacing:-.5px;}
+  .kpi-value .unit{font-size:12px;font-weight:500;color:var(--text-sub);margin-left:3px;}
+  .kpi-trend{font-size:11px;margin-top:6px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .kpi-trend .rate{color:var(--primary);background:#e8f2ff;padding:1px 7px;border-radius:10px;}
+  .kpi-trend .yoy.up{color:var(--c-workhours);}
+  .kpi-trend .yoy.down{color:#ef4444;}
+  .kpi-sub{font-size:10px;color:var(--text-light);margin-top:4px;}
+
+  /* 小KPI（人员模块） */
+  .kpi-mini-grid{
+    display:grid;grid-template-columns:repeat(6,1fr);
+    gap:12px;margin-bottom:18px;
+  }
+  .kpi-mini{
+    background:#fff;border-radius:10px;padding:14px;
+    border:1px solid var(--border);text-align:center;
+    box-shadow:var(--shadow-sm);
+  }
+  .kpi-mini .v{font-size:22px;font-weight:700;color:var(--primary-dark);}
+  .kpi-mini .l{font-size:11px;color:var(--text-sub);margin-top:4px;}
+
+  /* ===== 模块区块 ===== */
+  .section{
+    background:#fff;border-radius:var(--radius);
+    box-shadow:var(--shadow-sm);margin-bottom:22px;
+    overflow:hidden;border:1px solid var(--border);
+    scroll-margin-top:90px;
+    border-left:4px solid var(--section-color,#0080ff);
+  }
+  .section.s-overview{--section-color:var(--c-overview);}
+  .section.s-personnel{--section-color:var(--c-personnel);}
+  .section.s-financial{--section-color:var(--c-financial);}
+  .section.s-capacity{--section-color:var(--c-capacity);}
+  .section.s-performance{--section-color:var(--c-performance);}
+  .section.s-workhours{--section-color:var(--c-workhours);}
+  .section.s-culture{--section-color:var(--c-culture);}
+  .section.s-suggest{--section-color:var(--c-suggest);}
+
+  .section-header{
+    padding:16px 24px;
+    border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;
+    background:linear-gradient(90deg,
+      color-mix(in srgb,var(--section-color) 10%,#fff) 0%,
+      #fff 70%);
+  }
+  .section-title{display:flex;align-items:center;gap:13px;}
+  .section-num{
+    width:38px;height:38px;
+    background:linear-gradient(135deg,var(--section-color),color-mix(in srgb,var(--section-color) 60%,#fff));
+    color:#fff;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:700;
+    box-shadow:0 4px 10px color-mix(in srgb,var(--section-color) 35%,transparent);
+  }
+  .section-title h2{font-size:17px;font-weight:700;color:var(--text-main);}
+  .section-title p{font-size:12px;color:var(--text-sub);}
+  .section-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .section-body{padding:22px 24px;}
+
+  /* ===== 图表容器 ===== */
+  .chart-grid{display:grid;gap:18px;}
+  .chart-grid.cols-2{grid-template-columns:1fr 1fr;}
+  .chart-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .chart-box{
+    background:#fff;border:1px solid var(--border);
+    border-radius:var(--radius-sm);padding:16px;
+    box-shadow:0 1px 4px rgba(0,128,255,.05);
+  }
+  .chart-box h3{
+    font-size:14px;font-weight:700;color:var(--text-main);
+    margin-bottom:12px;display:flex;align-items:center;gap:8px;
+  }
+  .chart-box h3::before{
+    content:"";width:4px;height:14px;background:var(--section-color,#0080ff);border-radius:2px;
+  }
+  .chart-box h3 .drill-hint{
+    margin-left:auto;font-size:11px;color:var(--text-light);font-weight:500;
+    background:#f1f5f9;padding:2px 8px;border-radius:10px;
+  }
+  .chart{width:100%;height:340px;}
+  .chart.tall{height:420px;}
+  .chart.short{height:280px;}
+
+  /* ===== 数据表格 ===== */
+  .data-table-wrap{
+    overflow-x:auto;border:1px solid var(--border);
+    border-radius:var(--radius-sm);background:#fff;
+  }
+  table.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+  table.data-table th{
+    background:linear-gradient(180deg,#e8f2ff 0%,#d8e8ff 100%);
+    padding:11px 14px;text-align:left;font-weight:700;color:#0066cc;
+    border-bottom:2px solid #b9d8ff;white-space:nowrap;position:sticky;top:0;
+  }
+  table.data-table td{padding:10px 14px;border-bottom:1px solid #ecf2f9;color:var(--text-main);}
+  table.data-table tbody tr{cursor:pointer;transition:background .15s;}
+  table.data-table tbody tr:hover{background:#f6faff;}
+  table.data-table tbody tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+  .tag-green{background:#dcfce7;color:#15803d;}
+  .tag-red{background:#fee2e2;color:#b91c1c;}
+  .tag-blue{background:#dbeafe;color:#1e40af;}
+  .tag-orange{background:#ffedd5;color:#c2410c;}
+  .tag-gray{background:#f1f5f9;color:#475569;}
+  .tag-purple{background:#f3e8ff;color:#7e22ce;}
+  .delta-up{color:#22c55e;font-weight:600;}
+  .delta-down{color:#ef4444;font-weight:600;}
+
+  /* ===== 回到顶部 ===== */
+  .back-top{
+    position:fixed;right:24px;bottom:24px;
+    width:46px;height:46px;background:var(--primary-gradient);color:#fff;
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;box-shadow:0 6px 16px rgba(0,128,255,.35);
+    z-index:60;font-size:20px;transition:all .2s;
+    opacity:0;pointer-events:none;
+  }
+  .back-top.show{opacity:1;pointer-events:auto;}
+  .back-top:hover{transform:translateY(-3px);}
+
+  /* ===== 编辑/下钻弹窗 ===== */
+  .modal-mask{
+    position:fixed;inset:0;background:rgba(0,30,80,.45);
+    backdrop-filter:blur(5px);z-index:200;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-mask.show{display:flex;}
+  .modal{
+    background:#fff;border-radius:var(--radius);
+    width:90%;max-width:920px;max-height:86vh;
+    display:flex;flex-direction:column;
+    box-shadow:0 24px 60px rgba(0,30,80,.30);
+    overflow:hidden;border:1px solid var(--border);
+  }
+  .modal-header{
+    padding:18px 24px;background:var(--header-gradient);color:#fff;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .modal-header h3{font-size:16px;font-weight:700;}
+  .modal-header .modal-sub{font-size:12px;opacity:.85;margin-top:2px;}
+  .modal-close{
+    width:30px;height:30px;border:none;background:rgba(255,255,255,.2);
+    color:#fff;border-radius:8px;cursor:pointer;font-size:18px;
+  }
+  .modal-close:hover{background:rgba(255,255,255,.35);}
+  .modal-body{padding:20px 24px;overflow:auto;flex:1;}
+  .modal-footer{
+    padding:14px 24px;border-top:1px solid var(--border);
+    display:flex;justify-content:flex-end;gap:10px;background:#f6faff;
+  }
+  .edit-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .edit-table th{
+    background:#e8f2ff;padding:8px 10px;text-align:left;
+    font-weight:700;color:#0066cc;border:1px solid var(--border);font-size:12px;
+  }
+  .edit-table td{padding:4px;border:1px solid var(--border);}
+  .edit-table input{
+    width:100%;border:none;padding:6px 8px;font-size:13px;
+    background:transparent;font-family:inherit;
+  }
+  .edit-table input:focus{outline:2px solid #0080ff;background:#fff;}
+  .edit-table tr:hover{background:#f6faff;}
+  .edit-row-del{color:#ef4444;cursor:pointer;font-size:18px;width:30px;text-align:center;}
+  .edit-row-del:hover{opacity:.7;}
+  .modal-tip{font-size:12px;color:var(--text-sub);margin-bottom:12px;background:#e8f2ff;padding:10px 14px;border-radius:8px;border-left:3px solid #0080ff;}
+
+  /* 下钻详情卡片 */
+  .drill-stat-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;
+  }
+  .drill-stat{
+    background:linear-gradient(135deg,#f0f7ff 0%,#fff 100%);
+    border:1px solid var(--border);border-radius:10px;padding:14px;
+    border-left:3px solid #0080ff;
+  }
+  .drill-stat .l{font-size:11px;color:var(--text-sub);margin-bottom:4px;}
+  .drill-stat .v{font-size:20px;font-weight:700;color:#0066cc;}
+  .drill-stat .v .u{font-size:11px;color:var(--text-sub);margin-left:3px;}
+
+  /* ===== 问题建议卡片 ===== */
+  .suggest-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .suggest-card{border-radius:var(--radius-sm);padding:18px;border:1px solid var(--border);}
+  .suggest-card.problem{background:linear-gradient(135deg,#fff5f5 0%,#fff 100%);border-color:#fecaca;}
+  .suggest-card.solution{background:linear-gradient(135deg,#f0fdf4 0%,#fff 100%);border-color:#bbf7d0;}
+  .suggest-card h4{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .suggest-card.problem h4{color:#b91c1c;}
+  .suggest-card.solution h4{color:#15803d;}
+  .suggest-card ol{padding-left:20px;}
+  .suggest-card ol li{font-size:13px;margin-bottom:10px;line-height:1.7;color:var(--text-main);}
+  .suggest-card ol li b{color:#0066cc;}
+
+  /* ===== Toast ===== */
+  .toast{
+    position:fixed;top:90px;left:50%;
+    transform:translateX(-50%) translateY(-20px);
+    background:#0080ff;color:#fff;padding:12px 24px;border-radius:10px;
+    font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,128,255,.35);
+    z-index:300;opacity:0;pointer-events:none;transition:all .3s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.success{background:#22c55e;}
+  .toast.error{background:#ef4444;}
+
+  /* ===== 通用辅助 ===== */
+  .mt-16{margin-top:16px;}
+  .summary-box{
+    background:linear-gradient(90deg,#e8f2ff 0%,#f6faff 100%);
+    border-left:4px solid #0080ff;padding:14px 18px;border-radius:8px;
+    font-size:13px;color:var(--text-main);line-height:1.8;margin-top:16px;
+  }
+  .summary-box b{color:#0066cc;}
+  #fileInput{display:none;}
+
+  /* 响应式 */
+  @media(max-width:1280px){
+    .kpi-overview-grid{grid-template-columns:repeat(3,1fr);}
+    .kpi-mini-grid{grid-template-columns:repeat(3,1fr);}
+  }
+  @media(max-width:1100px){
+    .chart-grid.cols-2,.chart-grid.cols-3{grid-template-columns:1fr;}
+    .suggest-grid{grid-template-columns:1fr;}
+    :root{--sidebar-w:64px;}
+    .sidebar-logo .logo-text,.sidebar-search,.sidebar-nav a span:not(.icon),
+    .sidebar-nav .nav-section-title,.sidebar-footer .sb-btn span:not(.icon){display:none;}
+    .sidebar-logo{justify-content:center;padding:18px 0;}
+    .sidebar-nav a{justify-content:center;padding:12px 8px;}
+    .sidebar-footer .sb-btn{justify-content:center;padding:10px 8px;}
+  }
+  @media(max-width:768px){
+    .kpi-overview-grid{grid-template-columns:repeat(2,1fr);}
+    .kpi-mini-grid{grid-template-columns:repeat(2,1fr);}
+    .header{padding:14px 16px;}
+    .main{padding:18px 14px 40px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 左侧固定导航 ============ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-box">📊</div>
+    <div class="logo-text">
+      <h1>运营季报</h1>
+    </div>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" placeholder="🔍 搜索模块..." oninput="filterNav(this.value)">
+  </div>
+  <nav class="sidebar-nav" id="sidebarNav">
+    <div class="nav-section-title">主菜单</div>
+    <a href="#sec-overview" data-target="sec-overview" class="active"><span class="icon">★</span><span>指标总览</span></a>
+    <a href="#sec-personnel" data-target="sec-personnel"><span class="icon">👤</span><span>人员情况</span></a>
+    <a href="#sec-financial" data-target="sec-financial"><span class="icon">💰</span><span>经济指标</span></a>
+    <a href="#sec-capacity" data-target="sec-capacity"><span class="icon">⚙</span><span>产能分析</span></a>
+    <a href="#sec-performance" data-target="sec-performance"><span class="icon">📈</span><span>绩效奖金</span></a>
+    <a href="#sec-workhours" data-target="sec-workhours"><span class="icon">⏱</span><span>工时闭环</span></a>
+    <a href="#sec-culture" data-target="sec-culture"><span class="icon">🏆</span><span>企业文化</span></a>
+    <a href="#sec-suggest" data-target="sec-suggest"><span class="icon">💡</span><span>问题建议</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="sb-btn" onclick="exportAllData('json')"><span class="icon">⬇</span><span>导出JSON</span></button>
+    <button class="sb-btn" onclick="document.getElementById('fileInput').click()" title="支持 .json / .xlsx / .xls"><span class="icon">⬆</span><span>导入数据</span></button>
+    <button class="sb-btn" onclick="window.print()"><span class="icon">🖨</span><span>打印汇报</span></button>
+  </div>
+</aside>
+
+<!-- 头部 -->
+<header class="header">
+  <div class="header-left">
+    <div class="header-title">
+      <h1 id="headerTitle">外地分子公司三季度运营季报</h1>
+      <p id="headerSub">编写人：陶婉清 &nbsp;|&nbsp; 日期：2026年10月 &nbsp;|&nbsp; <span id="headerSlogan">客户至上 · 拼搏奉献 · 开拓创新 · 合作共赢</span></p>
+    </div>
+    <button class="btn btn-light btn-sm" onclick="openMetaEditor()" style="margin-left:8px">✎ 编辑抬头</button>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-light" onclick="exportToExcel()">⬇ 导出全部数据</button>
+    <button class="btn btn-light" onclick="exportAllData('json')" title="导出为 JSON 格式（备份用）">⬇ 导出JSON</button>
+    <button class="btn btn-light" onclick="exportFinalHTML()" title="将当前所有数据嵌入HTML，生成可分享的最终版" style="background:#0066cc;color:#fff">🔒 生成最终版HTML</button>
+    <button class="btn btn-light" onclick="document.getElementById('fileInput').click()" title="支持 .json / .xlsx / .xls 文件">⬆ 导入数据</button>
+    <button class="btn btn-light" onclick="resetAllData()" title="清除本地保存的数据，恢复初始默认数据">⟲ 恢复默认</button>
+    <input type="file" id="fileInput" accept=".json,.xlsx,.xls" onchange="importAllData(event)">
+  </div>
+</header>
+
+<div class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+<div class="toast" id="toast"></div>
+
+<!-- ============ 主内容 ============ -->
+<main class="main">
+
+  <!-- ===== 模块0：核心指标总览（一行6个） ===== -->
+  <section class="section s-overview" id="sec-overview">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">★</div>
+        <div>
+          <h2>核心指标总览</h2>
+          <p>关键经济指标完成情况一览（单击卡片可查看详情）</p>
+        </div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('overview')">✎ 编辑数据</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="kpi-overview-grid" id="kpiGrid"></div>
+      <div class="summary-box" id="overviewSummary"></div>
+    </div>
+  </section>
+
+  <!-- ===== 模块1：人员情况 ===== -->
+  <section class="section s-personnel" id="sec-personnel">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">01</div>
+        <div><h2>人员情况分析</h2><p>人员数量、招聘异动、年龄司龄学历分布</p></div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('personnel')">✎ 编辑数据</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSection('personnel','csv')">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="kpi-mini-grid" id="personnelKpi"></div>
+      <div class="chart-grid cols-2 mt-16">
+        <div class="chart-box">
+          <h3>各公司期末人数 vs 平均人数 <span class="drill-hint">单击柱体下钻</span></h3>
+          <div class="chart" id="chart-headcount"></div>
+        </div>
+        <div class="chart-box">
+          <h3>离职人员公司分布</h3>
+          <div class="chart" id="chart-resign"></div>
+        </div>
+      </div>
+      <div class="chart-box mt-16">
+        <h3>离职人员明细（九宫格落位与人员定位）</h3>
+        <div class="data-table-wrap" id="resignDetailTable"></div>
+      </div>
+      <div class="chart-grid cols-2 mt-16">
+        <div class="chart-box"><h3>年龄分布占比</h3><div class="chart short" id="chart-age"></div></div>
+        <div class="chart-box"><h3>司龄分布</h3><div class="chart short" id="chart-tenure"></div></div>
+      </div>
+      <div class="chart-box mt-16"><h3>各公司平均年龄</h3><div class="chart short" id="chart-avgAge"></div></div>
+      <div class="chart-grid cols-2 mt-16">
+        <div class="chart-box">
+          <h3>调入人员明细</h3>
+          <div class="data-table-wrap" id="transferInTable"></div>
+        </div>
+        <div class="chart-box">
+          <h3>调出人员明细</h3>
+          <div class="data-table-wrap" id="transferOutTable"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 模块2：关键经济指标 ===== -->
+  <section class="section s-financial" id="sec-financial">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">02</div>
+        <div><h2>关键经济指标分析</h2><p>净合同额 / 管理净营收 / 管理利润 / 元效 / 人工成本</p></div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('financial')">✎ 编辑数据</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSection('financial','csv')">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="chart-grid cols-2">
+        <div class="chart-box"><h3>各公司净合同额完成情况 <span class="drill-hint">单击柱体下钻</span></h3><div class="chart" id="chart-contract"></div></div>
+        <div class="chart-box"><h3>各公司管理净营收完成情况 <span class="drill-hint">单击柱体下钻</span></h3><div class="chart" id="chart-revenue"></div></div>
+      </div>
+      <div class="chart-grid cols-2 mt-16">
+        <div class="chart-box"><h3>各公司管理利润完成情况 <span class="drill-hint">单击柱体下钻</span></h3><div class="chart" id="chart-profit"></div></div>
+        <div class="chart-box"><h3>元均净营收完成情况（7家公司）</h3><div class="chart short" id="chart-efficiency-revenue"></div></div>
+      </div>
+      <div class="chart-grid cols-2 mt-16">
+        <div class="chart-box"><h3>元均利润完成情况（7家公司）</h3><div class="chart short" id="chart-efficiency-profit"></div></div>
+        <div class="chart-box"><h3>各公司人工成本及人均成本</h3><div class="chart" id="chart-laborCost"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 模块3：产能情况 ===== -->
+  <section class="section s-capacity" id="sec-capacity">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">03</div>
+        <div><h2>产能情况分析</h2><p>各公司实际产能、标准产能与产能转化率</p></div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('capacity')">✎ 编辑数据</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSection('capacity','csv')">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="chart-grid cols-2">
+        <div class="chart-box"><h3>各公司产能完成情况 <span class="drill-hint">单击柱体下钻</span></h3><div class="chart" id="chart-capacity"></div></div>
+        <div class="chart-box"><h3>各公司产能转化率</h3><div class="chart" id="chart-capacityRate"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 模块4：生产人员绩效 ===== -->
+  <section class="section s-performance" id="sec-performance">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">04</div>
+        <div><h2>生产人员产值与绩效奖金分析</h2><p>各公司生产人员三季度产值与绩效奖金变化</p></div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('performance')">✎ 编辑数据</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSection('performance','csv')">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="chart-grid cols-2" id="performanceCharts"></div>
+    </div>
+  </section>
+
+  <!-- ===== 模块5：工时闭环率 ===== -->
+  <section class="section s-workhours" id="sec-workhours">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">05</div>
+        <div><h2>工时闭环率分析</h2><p>各公司三季度报工闭环率情况</p></div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('workhours')">✎ 编辑数据</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSection('workhours','csv')">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="chart-grid cols-2">
+        <div class="chart-box"><h3>各公司工时闭环率对比 <span class="drill-hint">单击柱体下钻</span></h3><div class="chart" id="chart-workhours"></div></div>
+        <div class="chart-box"><h3>各公司应出勤与报工工时</h3><div class="chart" id="chart-workhoursBar"></div></div>
+      </div>
+      <div class="chart-box mt-16"><h3>低报工人员名单</h3><div class="data-table-wrap" id="lowReportTable"></div></div>
+    </div>
+  </section>
+
+  <!-- ===== 模块6：企业文化 ===== -->
+  <section class="section s-culture" id="sec-culture">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">06</div>
+        <div><h2>企业文化积分榜</h2><p>三季度企业文化积分获得情况</p></div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('culture')">✎ 编辑数据</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportSection('culture','csv')">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="chart-grid cols-2">
+        <div class="chart-box"><h3>企业文化积分排名 TOP10</h3><div class="chart tall" id="chart-culture"></div></div>
+        <div class="chart-box"><h3>各公司积分分布</h3><div class="chart tall" id="chart-cultureCompany"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 模块7：问题与建议 ===== -->
+  <section class="section s-suggest" id="sec-suggest">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-num">07</div>
+        <div><h2>问题与改进建议</h2><p>各维度存在问题及改进建议</p></div>
+      </div>
+      <div class="section-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditor('suggest')">✎ 编辑数据</button>
+      </div>
+    </div>
+    <div class="section-body" id="suggestBody"></div>
+  </section>
+
+</main>
+
+<!-- ============ 编辑/下钻弹窗 ============ -->
+<div class="modal-mask" id="modalMask">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="modalTitle">编辑数据</h3>
+        <div class="modal-sub" id="modalSub"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   数据中心
+   ============================================================ */
+const DASHBOARD_DATA = {
+  "meta": {
+    "title": "外地分子公司三季度运营季报",
+    "author": "陶婉清",
+    "date": "2026年10月",
+    "slogan": "客户至上 · 拼搏奉献 · 开拓创新 · 合作共赢"
+  },
+  "overviewSummary": "三季度净合同额完成2930万（完成比28%，同比下降52%）；管理净营收2949万（完成比49%，同比下降17%）；管理利润282万（完成比18%，同比下降46%）；人工成本2091万；元均管理净营收1.359，元均管理利润0.13。整体经营承压，需重点关注合同额、管理利润冲刺与元效指标。",
+  "kpiCards": [
+    {
+      "label": "净合同额",
+      "rate": "完成比 28%",
+      "yoy": "同比 -52%",
+      "yoyType": "down",
+      "sub": "年度目标 10400万"
+    },
+    {
+      "label": "管理净营收",
+      "rate": "完成比 49%",
+      "yoy": "同比 -17%",
+      "yoyType": "down",
+      "sub": "年度目标 6000万"
+    },
+    {
+      "label": "管理利润",
+      "rate": "完成比 18%",
+      "yoy": "同比 -46%",
+      "yoyType": "down",
+      "sub": "年度目标 1554万"
+    },
+    {
+      "label": "人工成本",
+      "rate": "人均 16.86万",
+      "yoy": "含25年终奖",
+      "yoyType": "up",
+      "sub": "月度1650.42+年终440.7"
+    },
+    {
+      "label": "元均管理净营收",
+      "rate": "完成比 61.6%",
+      "yoy": "目标 2.208",
+      "yoyType": "down",
+      "sub": "管理净营收÷人工成本"
+    },
+    {
+      "label": "元均管理利润",
+      "rate": "完成比 22.2%",
+      "yoy": "目标 0.585",
+      "yoyType": "down",
+      "sub": "管理利润÷人工成本"
+    }
+  ],
+  "personnel": {
+    "overview": {
+      "initial": 137,
+      "newAdd": 4,
+      "resigned": 18,
+      "transferOut": 8,
+      "transferIn": 9,
+      "end": 124,
+      "avg": 124
+    },
+    "companyHeadcount": [
+      {
+        "company": "宿迁公司",
+        "end": 21,
+        "avg": 21
+      },
+      {
+        "company": "南京立方",
+        "end": 19,
+        "avg": 19
+      },
+      {
+        "company": "徐州公司",
+        "end": 23,
+        "avg": 23
+      },
+      {
+        "company": "昆山公司",
+        "end": 22,
+        "avg": 22
+      },
+      {
+        "company": "滁州公司",
+        "end": 15,
+        "avg": 15
+      },
+      {
+        "company": "重庆公司",
+        "end": 10,
+        "avg": 10
+      },
+      {
+        "company": "嘉善分公司",
+        "end": 8,
+        "avg": 8
+      },
+      {
+        "company": "分子公司(成熟型)",
+        "end": 5,
+        "avg": 5
+      },
+      {
+        "company": "合肥办事处",
+        "end": 1,
+        "avg": 1
+      }
+    ],
+    "resignByCompany": [
+      {
+        "company": "南京立方",
+        "count": 8
+      },
+      {
+        "company": "宿迁公司",
+        "count": 6
+      },
+      {
+        "company": "昆山公司",
+        "count": 3
+      },
+      {
+        "company": "徐州公司",
+        "count": 1
+      }
+    ],
+    "resignDetail": [
+      {
+        "name": "王梦洁",
+        "company": "南京立方",
+        "grid": "5",
+        "talent": "骨干人才"
+      },
+      {
+        "name": "杨超",
+        "company": "南京立方",
+        "grid": "5",
+        "talent": "骨干人才"
+      },
+      {
+        "name": "姜大卫",
+        "company": "南京立方",
+        "grid": "5",
+        "talent": "骨干人才"
+      },
+      {
+        "name": "葛露萍",
+        "company": "南京立方",
+        "grid": "5",
+        "talent": "骨干人才"
+      },
+      {
+        "name": "韩艳颖",
+        "company": "南京立方",
+        "grid": "4",
+        "talent": "关注人才"
+      },
+      {
+        "name": "吴婕",
+        "company": "南京立方",
+        "grid": "4",
+        "talent": "关注人才"
+      },
+      {
+        "name": "孙健林",
+        "company": "南京立方",
+        "grid": "2",
+        "talent": "稳定人才"
+      },
+      {
+        "name": "刘冰",
+        "company": "南京立方",
+        "grid": "1",
+        "talent": "重点反馈人才"
+      },
+      {
+        "name": "侯祥旭",
+        "company": "徐州公司",
+        "grid": "4",
+        "talent": "关注人才"
+      },
+      {
+        "name": "徐天成",
+        "company": "宿迁公司",
+        "grid": "6",
+        "talent": "核心人才"
+      },
+      {
+        "name": "张堂伟",
+        "company": "宿迁公司",
+        "grid": "5",
+        "talent": "骨干人才"
+      },
+      {
+        "name": "胡贵江",
+        "company": "宿迁公司",
+        "grid": "1",
+        "talent": "重点反馈人才"
+      },
+      {
+        "name": "杜迎",
+        "company": "宿迁公司",
+        "grid": "1",
+        "talent": "重点反馈人才"
+      },
+      {
+        "name": "孙杭",
+        "company": "宿迁公司",
+        "grid": "1",
+        "talent": "重点反馈人才"
+      },
+      {
+        "name": "庄勇",
+        "company": "宿迁公司",
+        "grid": "1",
+        "talent": "重点反馈人才"
+      },
+      {
+        "name": "张辰宇",
+        "company": "昆山测绘",
+        "grid": "5",
+        "talent": "骨干人才"
+      },
+      {
+        "name": "赵静",
+        "company": "昆山测绘",
+        "grid": "未盘点",
+        "talent": "未盘点"
+      },
+      {
+        "name": "张华",
+        "company": "昆山测绘",
+        "grid": "未盘点",
+        "talent": "未盘点"
+      }
+    ],
+    "ageDistribution": [
+      {
+        "range": "30岁以下",
+        "percent": 17
+      },
+      {
+        "range": "30-40岁",
+        "percent": 58
+      },
+      {
+        "range": "40-50岁",
+        "percent": 17
+      },
+      {
+        "range": "50岁以上",
+        "percent": 8
+      }
+    ],
+    "tenureDistribution": [
+      {
+        "range": "3年以内",
+        "count": 20,
+        "percent": 14
+      },
+      {
+        "range": "3-5年",
+        "count": 34,
+        "percent": 24
+      },
+      {
+        "range": "5-10年",
+        "count": 48,
+        "percent": 33
+      },
+      {
+        "range": "10-20年",
+        "count": 25,
+        "percent": 17
+      },
+      {
+        "range": "20年以上",
+        "count": 17,
+        "percent": 12
+      }
+    ],
+    "avgAgeByCompany": [
+      {
+        "company": "昆山公司",
+        "age": 42.72
+      },
+      {
+        "company": "合肥办事处",
+        "age": 42
+      },
+      {
+        "company": "分子公司(成熟型)",
+        "age": 40
+      },
+      {
+        "company": "南京立方",
+        "age": 36.07
+      },
+      {
+        "company": "宿迁公司",
+        "age": 35.96
+      },
+      {
+        "company": "滁州公司",
+        "age": 35.8
+      },
+      {
+        "company": "徐州公司",
+        "age": 34.79
+      },
+      {
+        "company": "重庆公司",
+        "age": 33.3
+      },
+      {
+        "company": "嘉善分公司",
+        "age": 32.25
+      }
+    ],
+    "transferIn": [
+      {
+        "name": "王琪",
+        "type": "调入",
+        "from": "数字政府业务部",
+        "to": "分子公司(成熟型)"
+      },
+      {
+        "name": "关磊",
+        "type": "调入",
+        "from": "南通融信",
+        "to": "昆山公司"
+      },
+      {
+        "name": "甘立蹇",
+        "type": "调入",
+        "from": "分子公司(成熟型)",
+        "to": "昆山公司"
+      },
+      {
+        "name": "李章辉",
+        "type": "调入",
+        "from": "区域研发中心(重庆基地)",
+        "to": "重庆圆信"
+      },
+      {
+        "name": "王蓝皓",
+        "type": "调入",
+        "from": "区域研发中心(重庆基地)",
+        "to": "重庆圆信"
+      },
+      {
+        "name": "张浩",
+        "type": "调入",
+        "from": "自然资源业务部",
+        "to": "徐州公司"
+      },
+      {
+        "name": "袁亚伟",
+        "type": "调入",
+        "from": "徐州公司",
+        "to": "嘉善分公司"
+      },
+      {
+        "name": "辛玉洁",
+        "type": "调入",
+        "from": "办公室",
+        "to": "宿迁公司"
+      },
+      {
+        "name": "陈良浩",
+        "type": "调入",
+        "from": "宿迁公司",
+        "to": "江苏圆信"
+      }
+    ],
+    "transferOut": [
+      {
+        "name": "孙恺键",
+        "type": "调出",
+        "from": "南京立方",
+        "to": "苏州客户部"
+      },
+      {
+        "name": "魏丹丹",
+        "type": "调出",
+        "from": "徐州公司",
+        "to": "自然资源业务部"
+      },
+      {
+        "name": "袁亚伟",
+        "type": "调出",
+        "from": "徐州公司",
+        "to": "嘉善分公司"
+      },
+      {
+        "name": "李章辉",
+        "type": "调出",
+        "from": "区域研发中心(重庆基地)",
+        "to": "重庆圆信"
+      },
+      {
+        "name": "王蓝皓",
+        "type": "调出",
+        "from": "区域研发中心(重庆基地)",
+        "to": "重庆圆信"
+      },
+      {
+        "name": "刘亚",
+        "type": "调出",
+        "from": "昆山测绘",
+        "to": "人才资源池"
+      },
+      {
+        "name": "甘立蹇",
+        "type": "调出",
+        "from": "分子公司(成熟型)",
+        "to": "昆山公司"
+      },
+      {
+        "name": "陈良浩",
+        "type": "调出",
+        "from": "宿迁公司",
+        "to": "江苏圆信"
+      }
+    ]
+  },
+  "financial": {
+    "netContract": {
+      "yearTarget": 10400,
+      "quarterDone": 2930,
+      "rate": 28,
+      "yoy": -52,
+      "companies": [
+        {
+          "company": "宿迁公司",
+          "target": 2200,
+          "done": 516.52,
+          "lastYear": 1590.36
+        },
+        {
+          "company": "徐州公司",
+          "target": 2500,
+          "done": 482.74,
+          "lastYear": 1683.43
+        },
+        {
+          "company": "嘉善公司",
+          "target": 1500,
+          "done": 484.68,
+          "lastYear": 286.48
+        },
+        {
+          "company": "南京立方",
+          "target": 1500,
+          "done": 491.8,
+          "lastYear": 1005.95
+        },
+        {
+          "company": "昆山公司",
+          "target": 1800,
+          "done": 499.06,
+          "lastYear": 1050.12
+        },
+        {
+          "company": "滁州公司",
+          "target": 1000,
+          "done": 275.91,
+          "lastYear": 380.39
+        },
+        {
+          "company": "重庆公司",
+          "target": 1200,
+          "done": 165.82,
+          "lastYear": 37.09
+        }
+      ]
+    },
+    "revenue": {
+      "yearTarget": 6000,
+      "quarterDone": 2949,
+      "rate": 49,
+      "yoy": -17,
+      "companies": [
+        {
+          "company": "南京立方",
+          "target": 1100,
+          "done": 609.38,
+          "lastYear": 807.85
+        },
+        {
+          "company": "徐州公司",
+          "target": 1300,
+          "done": 846.92,
+          "lastYear": 729.57
+        },
+        {
+          "company": "昆山公司",
+          "target": 800,
+          "done": 372.55,
+          "lastYear": 586.26
+        },
+        {
+          "company": "宿迁公司",
+          "target": 1200,
+          "done": 487.01,
+          "lastYear": 725.42
+        },
+        {
+          "company": "滁州公司",
+          "target": 700,
+          "done": 269.94,
+          "lastYear": 191.2
+        },
+        {
+          "company": "嘉善公司",
+          "target": 600,
+          "done": 231.46,
+          "lastYear": 179.42
+        },
+        {
+          "company": "重庆公司",
+          "target": 600,
+          "done": 79.01,
+          "lastYear": 247.55
+        }
+      ]
+    },
+    "profit": {
+      "yearTarget": 1554,
+      "quarterDone": 282,
+      "rate": 18,
+      "yoy": -46,
+      "companies": [
+        {
+          "company": "徐州公司",
+          "target": 550,
+          "done": 305.92,
+          "lastYear": 212.23
+        },
+        {
+          "company": "南京立方",
+          "target": 350,
+          "done": 80.2,
+          "lastYear": 210.26
+        },
+        {
+          "company": "昆山公司",
+          "target": 200,
+          "done": 24.84,
+          "lastYear": 179.72
+        },
+        {
+          "company": "滁州公司",
+          "target": 200,
+          "done": 14.62,
+          "lastYear": -52.68
+        },
+        {
+          "company": "宿迁公司",
+          "target": 400,
+          "done": 12.38,
+          "lastYear": 140.95
+        },
+        {
+          "company": "嘉善公司",
+          "target": 200,
+          "done": 64.16,
+          "lastYear": -65.64
+        },
+        {
+          "company": "重庆公司",
+          "target": 200,
+          "done": -130.35,
+          "lastYear": -28.32
+        }
+      ]
+    },
+    "efficiency": {
+      "targets": [
+        {
+          "name": "元均管理净营收",
+          "target": 2.208,
+          "done": 1.359
+        },
+        {
+          "name": "元均管理利润",
+          "target": 0.585,
+          "done": 0.13
+        }
+      ],
+      "revenue": 2949,
+      "profit": 282,
+      "laborCost": 2091,
+      "companies": [
+        {
+          "company": "南京立方",
+          "revenue": 609.38,
+          "profit": 305.92,
+          "cost": 394.46,
+          "revenuePer": 1.545,
+          "profitPer": 0.776,
+          "revenueTarget": 2.021,
+          "profitTarget": 0.643
+        },
+        {
+          "company": "徐州公司",
+          "revenue": 846.92,
+          "profit": 80.2,
+          "cost": 405.04,
+          "revenuePer": 2.091,
+          "profitPer": 0.198,
+          "revenueTarget": 2.542,
+          "profitTarget": 1.076
+        },
+        {
+          "company": "昆山公司",
+          "revenue": 372.55,
+          "profit": 24.84,
+          "cost": 292.39,
+          "revenuePer": 1.274,
+          "profitPer": 0.085,
+          "revenueTarget": 1.971,
+          "profitTarget": 0.493
+        },
+        {
+          "company": "宿迁公司",
+          "revenue": 487.01,
+          "profit": 14.62,
+          "cost": 323.31,
+          "revenuePer": 1.506,
+          "profitPer": 0.045,
+          "revenueTarget": 2.465,
+          "profitTarget": 0.822
+        },
+        {
+          "company": "滁州公司",
+          "revenue": 269.94,
+          "profit": 12.38,
+          "cost": 212.23,
+          "revenuePer": 1.272,
+          "profitPer": 0.058,
+          "revenueTarget": 2.41,
+          "profitTarget": 0.689
+        },
+        {
+          "company": "嘉善公司",
+          "revenue": 231.46,
+          "profit": 64.16,
+          "cost": 149.47,
+          "revenuePer": 1.549,
+          "profitPer": 0.429,
+          "revenueTarget": 2.852,
+          "profitTarget": 0.951
+        },
+        {
+          "company": "重庆公司",
+          "revenue": 79.01,
+          "profit": -130.35,
+          "cost": 178.15,
+          "revenuePer": 0.444,
+          "profitPer": -0.732,
+          "revenueTarget": 2.248,
+          "profitTarget": 0.749
+        }
+      ]
+    },
+    "laborCost": [
+      {
+        "company": "南京立方",
+        "avgCount": 19.2,
+        "monthly": 309.63,
+        "yearBonus": 84.83,
+        "total": 394.46,
+        "perCapita": 20.54
+      },
+      {
+        "company": "徐州公司",
+        "avgCount": 23.45,
+        "monthly": 306.17,
+        "yearBonus": 98.87,
+        "total": 405.04,
+        "perCapita": 17.27
+      },
+      {
+        "company": "宿迁公司",
+        "avgCount": 21.45,
+        "monthly": 268.04,
+        "yearBonus": 55.27,
+        "total": 323.31,
+        "perCapita": 15.07
+      },
+      {
+        "company": "昆山公司",
+        "avgCount": 22,
+        "monthly": 268.43,
+        "yearBonus": 23.95,
+        "total": 292.38,
+        "perCapita": 13.29
+      },
+      {
+        "company": "滁州公司",
+        "avgCount": 15.45,
+        "monthly": 165.29,
+        "yearBonus": 46.93,
+        "total": 212.22,
+        "perCapita": 13.74
+      },
+      {
+        "company": "重庆公司",
+        "avgCount": 10,
+        "monthly": 141.35,
+        "yearBonus": 36.8,
+        "total": 178.15,
+        "perCapita": 17.82
+      },
+      {
+        "company": "嘉善公司",
+        "avgCount": 8.45,
+        "monthly": 109.16,
+        "yearBonus": 40.31,
+        "total": 149.47,
+        "perCapita": 17.69
+      },
+      {
+        "company": "外地本级",
+        "avgCount": 3,
+        "monthly": 59.14,
+        "yearBonus": 50.54,
+        "total": 109.68,
+        "perCapita": 36.56
+      },
+      {
+        "company": "合肥办事处",
+        "avgCount": 1,
+        "monthly": 23.2,
+        "yearBonus": 3.2,
+        "total": 26.4,
+        "perCapita": 26.4
+      }
+    ]
+  },
+  "capacity": {
+    "overview": {
+      "actual": 2742,
+      "standard": 4644,
+      "rate": 59
+    },
+    "companies": [
+      {
+        "company": "南京立方",
+        "actual": 507.05,
+        "standard": 803.29,
+        "rate": 63.12
+      },
+      {
+        "company": "徐州公司",
+        "actual": 602.62,
+        "standard": 869.79,
+        "rate": 69.28
+      },
+      {
+        "company": "滁州公司",
+        "actual": 349.44,
+        "standard": 584.34,
+        "rate": 59.8
+      },
+      {
+        "company": "嘉善公司",
+        "actual": 254.58,
+        "standard": 321.73,
+        "rate": 79.13
+      },
+      {
+        "company": "宿迁公司",
+        "actual": 469.37,
+        "standard": 921.12,
+        "rate": 50.96
+      },
+      {
+        "company": "昆山公司",
+        "actual": 443.94,
+        "standard": 789.5,
+        "rate": 56.23
+      },
+      {
+        "company": "重庆公司",
+        "actual": 115.46,
+        "standard": 354.04,
+        "rate": 32.61
+      }
+    ]
+  },
+  "performance": {
+    "groups": [
+      {
+        "company": "滁州公司",
+        "totalDeduct": 10236,
+        "people": [
+          {
+            "name": "陈方凯",
+            "value": 131.6,
+            "bonus": 0.2408
+          },
+          {
+            "name": "郭健",
+            "value": 121.84,
+            "bonus": 0.1997
+          },
+          {
+            "name": "王飞",
+            "value": 127.17,
+            "bonus": 0.0338
+          },
+          {
+            "name": "万晓航",
+            "value": 95.38,
+            "bonus": 0.1431
+          },
+          {
+            "name": "王清竹",
+            "value": 78.01,
+            "bonus": 0.0439
+          },
+          {
+            "name": "付在峰",
+            "value": 100.98,
+            "bonus": -0.1626
+          },
+          {
+            "name": "于绍强",
+            "value": 93.36,
+            "bonus": -0.2514
+          },
+          {
+            "name": "何可佳",
+            "value": 73.59,
+            "bonus": -0.1388
+          },
+          {
+            "name": "程云云",
+            "value": 91.75,
+            "bonus": -0.1618
+          },
+          {
+            "name": "樊宇杰",
+            "value": 63.25,
+            "bonus": -0.2124
+          }
+        ]
+      },
+      {
+        "company": "嘉善公司",
+        "totalDeduct": -2313,
+        "people": [
+          {
+            "name": "毛荣",
+            "value": 83.87,
+            "bonus": 0.0538
+          },
+          {
+            "name": "缪超亚",
+            "value": 92.15,
+            "bonus": 0.0046
+          },
+          {
+            "name": "陈皓琪",
+            "value": 84.38,
+            "bonus": 0.007
+          }
+        ]
+      },
+      {
+        "company": "南京立方",
+        "totalDeduct": 76992,
+        "people": [
+          {
+            "name": "郭维诚",
+            "value": 88.72,
+            "bonus": 0.3434
+          },
+          {
+            "name": "夏磊凯",
+            "value": 69.79,
+            "bonus": -0.1062
+          },
+          {
+            "name": "冯程伟",
+            "value": 47.23,
+            "bonus": -0.2136
+          },
+          {
+            "name": "张大印",
+            "value": 39.56,
+            "bonus": -0.2424
+          },
+          {
+            "name": "姚定成",
+            "value": 41.79,
+            "bonus": -0.0671
+          },
+          {
+            "name": "胡其丹",
+            "value": 37.38,
+            "bonus": -0.461
+          },
+          {
+            "name": "高朝",
+            "value": 36.6,
+            "bonus": -0.1503
+          },
+          {
+            "name": "杨超",
+            "value": 33.79,
+            "bonus": 0.0021
+          },
+          {
+            "name": "岳笑笑",
+            "value": 40.89,
+            "bonus": 0.0025
+          },
+          {
+            "name": "姜大卫",
+            "value": 21.41,
+            "bonus": -0.4666
+          },
+          {
+            "name": "张宏洋",
+            "value": 41.14,
+            "bonus": -0.4629
+          },
+          {
+            "name": "韩艳颖",
+            "value": 7.36,
+            "bonus": -0.6114
+          }
+        ]
+      },
+      {
+        "company": "徐州公司",
+        "totalDeduct": 50046,
+        "people": [
+          {
+            "name": "朱友基",
+            "value": 101.26,
+            "bonus": -0.0918
+          },
+          {
+            "name": "曹海波",
+            "value": 94.15,
+            "bonus": 0.1375
+          },
+          {
+            "name": "庄勇吉",
+            "value": 73.42,
+            "bonus": -0.3542
+          },
+          {
+            "name": "王泽宇",
+            "value": 74.04,
+            "bonus": -0.3127
+          },
+          {
+            "name": "杜传博",
+            "value": 78.32,
+            "bonus": -0.2306
+          },
+          {
+            "name": "张一丁",
+            "value": 69.51,
+            "bonus": -0.1755
+          },
+          {
+            "name": "刘浩",
+            "value": 46.28,
+            "bonus": -0.2946
+          }
+        ]
+      },
+      {
+        "company": "宿迁公司",
+        "totalDeduct": 65796,
+        "people": [
+          {
+            "name": "陈良浩",
+            "value": 53.85,
+            "bonus": -0.1099
+          },
+          {
+            "name": "张锦",
+            "value": 47.08,
+            "bonus": -0.1279
+          },
+          {
+            "name": "申奇",
+            "value": 46.94,
+            "bonus": -0.0647
+          },
+          {
+            "name": "孙波",
+            "value": 43.86,
+            "bonus": -0.0573
+          },
+          {
+            "name": "臧定国",
+            "value": 42.9,
+            "bonus": -0.057
+          },
+          {
+            "name": "韩壮洋",
+            "value": 40.68,
+            "bonus": -0.0734
+          },
+          {
+            "name": "陆小海",
+            "value": 41.31,
+            "bonus": -0.1927
+          },
+          {
+            "name": "徐建",
+            "value": 28.98,
+            "bonus": -0.0895
+          },
+          {
+            "name": "陆蒙蒙",
+            "value": 33.22,
+            "bonus": -0.1639
+          },
+          {
+            "name": "欧永",
+            "value": 20.65,
+            "bonus": -0.2949
+          },
+          {
+            "name": "庄勇",
+            "value": 14.17,
+            "bonus": -0.0254
+          },
+          {
+            "name": "孙杭",
+            "value": 1.91,
+            "bonus": -0.8195
+          },
+          {
+            "name": "徐天成",
+            "value": 1.63,
+            "bonus": -0.901
+          },
+          {
+            "name": "胡贵江",
+            "value": 0.74,
+            "bonus": -0.9228
+          }
+        ]
+      }
+    ]
+  },
+  "workhours": {
+    "companies": [
+      {
+        "company": "宿迁公司",
+        "count": 21,
+        "should": 12106.16,
+        "reported": 9290.5,
+        "project": 7269,
+        "lowClose": 3,
+        "lowValid": 3,
+        "closeRate": 76.74,
+        "validRate": 60.04
+      },
+      {
+        "company": "徐州公司",
+        "count": 27,
+        "should": 18641.24,
+        "reported": 18089.5,
+        "project": 17472.5,
+        "lowClose": 0,
+        "lowValid": 0,
+        "closeRate": 97.04,
+        "validRate": 93.73
+      },
+      {
+        "company": "嘉善公司",
+        "count": 6,
+        "should": 3792.22,
+        "reported": 3503.8,
+        "project": 3503.8,
+        "lowClose": 0,
+        "lowValid": 0,
+        "closeRate": 92.39,
+        "validRate": 92.39
+      },
+      {
+        "company": "江苏圆信",
+        "count": 5,
+        "should": 2676.72,
+        "reported": 2425,
+        "project": 2425,
+        "lowClose": 0,
+        "lowValid": 0,
+        "closeRate": 90.6,
+        "validRate": 90.6
+      },
+      {
+        "company": "滁州公司",
+        "count": 12,
+        "should": 8636.95,
+        "reported": 8143.5,
+        "project": 7920.4,
+        "lowClose": 0,
+        "lowValid": 0,
+        "closeRate": 94.29,
+        "validRate": 91.7
+      },
+      {
+        "company": "昆山公司",
+        "count": 17,
+        "should": 12481.64,
+        "reported": 11901.6,
+        "project": 11212,
+        "lowClose": 3,
+        "lowValid": 3,
+        "closeRate": 95.35,
+        "validRate": 89.83
+      },
+      {
+        "company": "南京立方",
+        "count": 15,
+        "should": 8944,
+        "reported": 8450.8,
+        "project": 7457.3,
+        "lowClose": 1,
+        "lowValid": 1,
+        "closeRate": 94.49,
+        "validRate": 83.38
+      },
+      {
+        "company": "重庆公司",
+        "count": 7,
+        "should": 4159.91,
+        "reported": 4334.7,
+        "project": 3604.5,
+        "lowClose": 0,
+        "lowValid": 0,
+        "closeRate": 104.2,
+        "validRate": 86.65
+      },
+      {
+        "company": "分子公司(成熟型)",
+        "count": 2,
+        "should": 1065.02,
+        "reported": 729.8,
+        "project": 721.8,
+        "lowClose": 1,
+        "lowValid": 1,
+        "closeRate": 68.52,
+        "validRate": 67.77
+      }
+    ],
+    "lowReport": [
+      {
+        "name": "张嘉志",
+        "dept": "宿迁公司",
+        "closeRate": 22.73,
+        "validRate": 22.73
+      },
+      {
+        "name": "申奇",
+        "dept": "宿迁公司",
+        "closeRate": 88.52,
+        "validRate": 88.52
+      },
+      {
+        "name": "张锦",
+        "dept": "宿迁公司",
+        "closeRate": 76.42,
+        "validRate": 76.42
+      },
+      {
+        "name": "胡其丹",
+        "dept": "南京立方",
+        "closeRate": 78.72,
+        "validRate": 76.34
+      },
+      {
+        "name": "王友",
+        "dept": "昆山公司",
+        "closeRate": 88.8,
+        "validRate": 88.8
+      },
+      {
+        "name": "黄震晨",
+        "dept": "昆山公司",
+        "closeRate": 89.02,
+        "validRate": 89.02
+      },
+      {
+        "name": "张益新",
+        "dept": "昆山公司",
+        "closeRate": 89.05,
+        "validRate": 89.05
+      }
+    ]
+  },
+  "culture": {
+    "scores": [
+      {
+        "name": "计双双",
+        "company": "南京立方",
+        "score": 19,
+        "reason": "获得低空产业创新大赛三等奖、通过内部资源交易支援项目开展、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "夏磊凯",
+        "company": "南京立方",
+        "score": 12,
+        "reason": "获得低空产业创新大赛三等奖、刊物投稿、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "张东升",
+        "company": "分子公司(成熟型)",
+        "score": 15,
+        "reason": "主动参与AI创新应用大赛并提案、推动部门内异常项目整改、积极配合流程改善工作"
+      },
+      {
+        "name": "王琪",
+        "company": "分子公司(成熟型)",
+        "score": 11,
+        "reason": "担任部门级培训讲师、投标技术方案撰写获点赞"
+      },
+      {
+        "name": "陈良浩",
+        "company": "宿迁公司",
+        "score": 11,
+        "reason": "通过内部资源交易支援项目开展、质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "赵天明",
+        "company": "徐州公司",
+        "score": 11,
+        "reason": "质量月知识竞赛二等奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "陈羿臣",
+        "company": "昆山公司",
+        "score": 16,
+        "reason": "参与AI知识趣答活动连续通关5天、质量月知识竞赛二等奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "郭健",
+        "company": "滁州公司",
+        "score": 13,
+        "reason": "参与AI知识趣答活动连续正确率100%、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "陈帆",
+        "company": "滁州公司",
+        "score": 10,
+        "reason": "参与AI知识趣答活动连续正确率100%"
+      },
+      {
+        "name": "何可佳",
+        "company": "滁州公司",
+        "score": 8,
+        "reason": "通过内部资源交易支援项目开展、质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "郭腾飞",
+        "company": "昆山公司",
+        "score": 8,
+        "reason": "积极参与测绘技能竞赛并完赛、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "何淑龙",
+        "company": "昆山公司",
+        "score": 8,
+        "reason": "积极参与测绘技能竞赛并完赛、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "仲宇",
+        "company": "昆山公司",
+        "score": 8,
+        "reason": "质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "董涛",
+        "company": "嘉善公司",
+        "score": 7,
+        "reason": "积极探索创新方法把控项目质量、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "周旺辉",
+        "company": "南京立方",
+        "score": 7,
+        "reason": "获得低空产业创新大赛三等奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "赵晔",
+        "company": "昆山公司",
+        "score": 7,
+        "reason": "参与AI知识趣答活动连续通关5天、质量月知识竞赛参与奖"
+      },
+      {
+        "name": "马勇",
+        "company": "重庆公司",
+        "score": 6,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "王俊",
+        "company": "南京立方",
+        "score": 6,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "毛荣",
+        "company": "昆山公司",
+        "score": 6,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "杨帆",
+        "company": "嘉善公司",
+        "score": 6,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "李亚",
+        "company": "重庆公司",
+        "score": 5,
+        "reason": "质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "陈方凯",
+        "company": "滁州公司",
+        "score": 5,
+        "reason": "通过内部资源交易支援项目开展、质量月知识竞赛参与奖"
+      },
+      {
+        "name": "张明翠",
+        "company": "滁州公司",
+        "score": 5,
+        "reason": "参与AI知识趣答活动连续通关5天"
+      },
+      {
+        "name": "李鹏",
+        "company": "分子公司(成熟型)",
+        "score": 5,
+        "reason": "质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "苏洁",
+        "company": "分子公司(成熟型)",
+        "score": 5,
+        "reason": "负责外部公司商机挖掘与客户拓展获点赞"
+      },
+      {
+        "name": "陆蒙蒙",
+        "company": "宿迁公司",
+        "score": 5,
+        "reason": "质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "罗东",
+        "company": "宿迁公司",
+        "score": 5,
+        "reason": "质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "季中华",
+        "company": "昆山公司",
+        "score": 5,
+        "reason": "参与AI知识趣答活动连续通关5天"
+      },
+      {
+        "name": "王飞",
+        "company": "滁州公司",
+        "score": 2,
+        "reason": "质量月知识竞赛参与奖"
+      },
+      {
+        "name": "王雪",
+        "company": "昆山公司",
+        "score": 5,
+        "reason": "质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "徐鸿",
+        "company": "昆山公司",
+        "score": 5,
+        "reason": "质量月知识竞赛参与奖、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "袁亚伟",
+        "company": "嘉善公司",
+        "score": 3,
+        "reason": "勇于承担生产重任从徐州到嘉善获点赞、质量月知识竞赛参与奖"
+      },
+      {
+        "name": "汤中山",
+        "company": "嘉善公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "黄震晨",
+        "company": "昆山公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "张益新",
+        "company": "昆山公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "李小燕",
+        "company": "重庆公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "李章辉",
+        "company": "重庆公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "王蓝皓",
+        "company": "重庆公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "曹海波",
+        "company": "徐州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "孙玮",
+        "company": "徐州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "臧定国",
+        "company": "徐州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "张晋阁",
+        "company": "徐州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "张明光",
+        "company": "徐州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "种子威",
+        "company": "徐州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "庄勇吉",
+        "company": "徐州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "高朝",
+        "company": "南京立方",
+        "score": 5,
+        "reason": "通过内部资源交易支援项目开展、质量月知识竞赛参与奖"
+      },
+      {
+        "name": "岳笑笑",
+        "company": "南京立方",
+        "score": 3,
+        "reason": "通过内部资源交易支援项目开展"
+      },
+      {
+        "name": "姚定成",
+        "company": "南京立方",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "张一丁",
+        "company": "徐州公司",
+        "score": 5,
+        "reason": "通过内部资源交易支援项目开展、优质服务获得客户表扬信"
+      },
+      {
+        "name": "陈皓琪",
+        "company": "徐州公司",
+        "score": 4,
+        "reason": "为嘉善测绘项目加班加点获点赞、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "缪超亚",
+        "company": "徐州公司",
+        "score": 4,
+        "reason": "为嘉善测绘项目经常加班获点赞、主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "樊宇杰",
+        "company": "滁州公司",
+        "score": 3,
+        "reason": "通过内部资源交易支援项目开展"
+      },
+      {
+        "name": "程云云",
+        "company": "滁州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "窦曙健",
+        "company": "滁州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "付在峰",
+        "company": "滁州公司",
+        "score": 3,
+        "reason": "主动参与AI创新应用大赛并提案"
+      },
+      {
+        "name": "杜传博",
+        "company": "徐州公司",
+        "score": 2,
+        "reason": "优质服务获得客户表扬信"
+      },
+      {
+        "name": "刘聪",
+        "company": "徐州公司",
+        "score": 2,
+        "reason": "优质服务获得客户表扬信"
+      },
+      {
+        "name": "王泽宇",
+        "company": "徐州公司",
+        "score": 2,
+        "reason": "优质服务获得客户表扬信"
+      },
+      {
+        "name": "朱友基",
+        "company": "徐州公司",
+        "score": 2,
+        "reason": "优质服务获得客户表扬信"
+      },
+      {
+        "name": "常晓芸",
+        "company": "昆山公司",
+        "score": 2,
+        "reason": "质量月知识竞赛参与奖"
+      },
+      {
+        "name": "范金明",
+        "company": "昆山公司",
+        "score": 2,
+        "reason": "质量月知识竞赛参与奖"
+      },
+      {
+        "name": "杨黎辉",
+        "company": "昆山公司",
+        "score": 2,
+        "reason": "质量月知识竞赛参与奖"
+      },
+      {
+        "name": "邹荣",
+        "company": "宿迁公司",
+        "score": 2,
+        "reason": "质量月知识竞赛参与奖"
+      },
+      {
+        "name": "陈莎莎",
+        "company": "南京立方",
+        "score": 2,
+        "reason": "质量月知识竞赛参与奖"
+      },
+      {
+        "name": "王峰",
+        "company": "合肥办事处",
+        "score": 2,
+        "reason": "质量月知识竞赛参与奖"
+      }
+    ]
+  },
+  "suggest": [
+    {
+      "topic": "经济指标、产能相关",
+      "problems": [
+        "净合同额完成严重不及预期：三季度年度目标完成率仅28%，同比大幅下滑52%，未达成季度既定目标；其中重庆、徐州公司完成率不足20%，为完成率最低的两家；宿迁、徐州、昆山、南京立方四家公司净合同额同比下滑尤为明显（降幅均超50%）。",
+        "管理利润同比承压显著：整体管理利润同比下降46%，年度目标完成率仅18%；重庆公司利润亏损且亏损额同比扩大（由-28.32万扩大至-130.35万），宿迁、南京立方、昆山公司利润大幅下滑，仅徐州、滁州、嘉善实现利润正增长。",
+        "元效指标完成率偏低：元均管理净营收目标2.208万，仅完成1.359万，完成率61.55%；元均管理利润目标0.585万，仅完成0.13万，完成率22.22%，人均产出效率远未达预期。",
+        "产能整体利用效率偏低：7家分子公司综合产能转化率平均仅约59%，其中重庆（32.61%）、宿迁（50.96%）明显偏低，未达到标准理想水平，产能资源未充分释放，人力投入与产出不匹配。"
+      ],
+      "solutions": [
+        "全力冲刺合同额目标：各分子公司拆解细化年度经营指标，制定区域拓展、老客户深度挖掘专项方案，建立月度、季度经营复盘机制，将合同额完成情况与团队绩效强挂钩。",
+        "攻坚历史款项回收：将历史回款任务责任到人，按月度、季度开展回款PDCA闭环管理，建立回款专项激励机制，加快资金回笼，降低坏账风险。",
+        "深化精细化成本管控：建立成本与营收、利润联动挂钩机制，严格管控无效人力扩招，绩效资源向高业绩、高贡献员工倾斜，精简冗余人员编制，提升利润空间。",
+        "盘活存量闲置产能：统筹跨区域人力调配，安排低产能单位闲置人力支援高需求业务板块，减少人力及产能资源浪费，提升整体产能转化率。"
+      ]
+    },
+    {
+      "topic": "人员情况相关",
+      "problems": [
+        "核心骨干人才流失风险突出：三季度离职18人，其中核心人才（九宫格落位6）1人、骨干人才（落位5）6人，合计占离职人数39%，且集中在南京立方（8人）、宿迁（6人）公司，核心岗位人才流失对业务连续性造成较大影响。",
+        "人员年龄结构失衡：昆山公司员工平均年龄42.72岁，老龄化问题凸显；全员以30-40岁人员为主体（占比58%），30岁以下青年仅占17%，青年后备人才储备缺口较大，人才梯队断层风险高。",
+        "人员司龄结构偏老化：司龄5年以上人员占比达62%（其中10年以上占29%），资深人员集中，3年以内新员工仅占14%，人才梯队中新鲜血液补充不足，断层风险高。"
+      ],
+      "solutions": [
+        "优化年龄及司龄结构：针对昆山等老龄化突出的分子公司，通过校园招聘、社会招聘定向引进30岁以下青年人才，补充新鲜血液，逐步优化人才年龄与司龄梯队结构。",
+        "建立人才九宫格常态化盘点：定期更新人才层级定位，重点关注核心、骨干人才，提前做好人才梯队储备，建立后备人才培养机制，避免人才断层。",
+        "完善人才招聘与补充机制：制定月度人才招聘计划，加快核心岗位、青年人才的补充速度，匹配业务发展的人才需求。"
+      ]
+    },
+    {
+      "topic": "产值与绩效奖金相关",
+      "problems": [
+        "生产人员绩效扣减额度偏高：南京立方、宿迁、徐州、滁州等公司生产人员绩效大额扣减（南京立方扣减7.70万元、宿迁6.58万元、徐州5.00万元、滁州1.02万元），暴露出部分员工个人产值未达标、工作产出与岗位绩效不匹配等问题；嘉善公司为唯一绩效激励兑现公司（激励2313元）。",
+        "产值绩效联动机制落地不到位：绩效与实际产值挂钩约束力度不足，低产出员工未有效管控，优秀员工激励力度不足，绩效奖惩导向作用弱化，未能有效激发员工积极性。",
+        "全员工作士气亟待关注：各分子公司普遍存在员工工作积极性不足、团队士气低迷的情况，绩效激励不到位进一步加剧了员工负面情绪，影响业务产出。"
+      ],
+      "solutions": [
+        "开展高绩效扣减人员专项帮扶：对绩效大额扣减员工进行一对一复盘诊断，深挖产值不达标的核心原因，定制个人能力提升计划，实行老员工带教帮扶机制，限期提升个人产值达标率。",
+        "完善生产人员绩效二次分配规则：将月度产值、工作量、成果质量纳入绩效考核细则，明确达标标准，拉开绩效差距，奖优罚劣，真正实现绩效与产出强挂钩。",
+        "强化正向激励与荣誉认可：日常工作、项目成果、主动担当行为及时点名肯定，例会、工作群公开表彰，搭配小奖励（礼品、下午茶、积分），让付出被看见，提升员工归属感和工作积极性。",
+        "建立产值目标月度跟踪机制：按月度跟踪员工产值完成情况，对进度滞后的员工及时预警和帮扶，避免季度末出现大规模绩效扣减情况。"
+      ]
+    },
+    {
+      "topic": "工时闭环率相关",
+      "problems": [
+        "工时闭环管理成效不足：宿迁公司、分子公司(成熟型)工时闭环率及有效闭环率明显偏低（宿迁闭环率76.74%、有效闭环率60.04%；成熟型本级闭环率68.52%、有效闭环率67.77%），低报工人员名单中宿迁占比最高（7人中占3人），存在工时填报不及时、工时零闭环等问题，需引起重视。",
+        "工时投入结构不合理：宿迁、重庆、南京立方等公司非项目工时占报工工时比例偏高（宿迁约16%、重庆约17%、南京立方约12%），项目有效工时占比偏低，人力工时资源未充分聚焦核心主营业务，工时投入产出效率低。",
+        "工时填报管控力度不足：各单位对工时填报的监督、考核不到位，未建立有效的工时管理机制，员工规范填报工时的责任意识薄弱。"
+      ],
+      "solutions": [
+        "严格规范工时填报管理：明确每日工时填报标准及要求，定期公示晾晒各单位工时闭环率数据，强化全员规范填报工时的责任意识，将工时闭环情况与个人绩效挂钩。",
+        "优化工时投入结构配置：严控无效其他工时支出，引导员工工时向项目、生产、研发等核心业务归集，持续提升有效工时占比，确保工时资源聚焦核心业务产出。",
+        "开展低闭环人员专项整治：对工时零闭环、低闭环的重点人员进行约谈警示，下达整改要求，限期完成工时闭环率提升整改，对整改不到位的人员进行绩效问责。",
+        "建立工时管理常态化巡检机制：每周对各单位工时填报情况进行巡检，及时发现并纠正不规范填报问题，确保工时管理落地见效。"
+      ]
+    },
+    {
+      "topic": "企业文化相关",
+      "problems": [
+        "文化活动员工参与覆盖面有待扩大：AI趣答、刊物投稿、客户表扬、内部资源支援等文化积分活动，参与人数约65人（占期末人数约52%），仍有近半数员工未参与，全员参与积极性不足，文化活动未能覆盖全体员工。",
+        "企业文化下沉一线不足：部分分子公司文化积分参与人次偏少，企业文化未能有效下沉到一线员工，员工对公司文化的认同感、参与感不强，文化引领作用未充分发挥。",
+        "文化活动与业务、地域特色结合不紧密：现有文化活动虽涵盖AI知识趣答、AI创新应用大赛、质量月知识竞赛、测绘技能竞赛、低空产业创新大赛等多种形式，但未能结合各分子公司的地域特色和业务实际进行定制化设计，针对性和吸引力不足。"
+      ],
+      "solutions": [
+        "落地文化积分联动激励：将企业文化积分与年度评优评先、绩效激励深度挂钩，激发员工主动参与文化活动的内生动力，提升文化活动全员参与率。",
+        "设立基层文化联络专员：各分子公司配置专属文化联络员，负责组织线下文化活动、统计文化积分、宣传标杆典型事迹，推动企业文化下沉一线，覆盖全体员工。",
+        "丰富特色文化活动载体：各分子公司结合自身地域及业务特色，定制开展多元化文化活动，将企业文化与业务发展、团队建设深度融合，全方位营造浓厚企业文化氛围。",
+        "强化文化标杆宣传：定期评选、宣传业务一线的标杆典型事迹，发挥榜样引领作用，增强员工对公司文化的认同感和归属感。"
+      ]
+    }
+  ]
+};
+
+const chartInstances={};
+const COLORS={
+  primary:'#0080ff',primaryDark:'#0066cc',primaryLight:'#3b9eff',
+  cyan:'#06b6d4',orange:'#fb923c',green:'#22c55e',
+  red:'#ef4444',purple:'#a855f7',pink:'#ec4899',gold:'#f59e0b',
+  indigo:'#6366f1',teal:'#14b8a6',
+  // 加深的目标色（淡灰蓝，与完成色形成对比）
+  targetGray:'#94a3b8',targetGrayLight:'#cbd5e1',
+  palette:['#0080ff','#fb923c','#a855f7','#22c55e','#ec4899','#06b6d4','#f59e0b','#6366f1','#14b8a6','#ef4444']
+};
+
+/* 通用坐标轴样式 */
+const AXIS_STYLE={
+  axisLine:{lineStyle:{color:'#cbd5e1'}},
+  axisTick:{lineStyle:{color:'#cbd5e1'}},
+  axisLabel:{color:'#475569'},
+  splitLine:{lineStyle:{color:'#eef2f7'}}
+};
+
+/* ============================================================
+   渲染：KPI 总览（一行6个）
+   ============================================================ */
+function renderKpiOverview(){
+  const f=DASHBOARD_DATA.financial;
+  /* 始终使用实际数据计算（kpiCards 仅用于自定义图标/标签名称，不参与数值） */
+  /* 人均成本 = 人工成本合计 ÷ 总平均人数（来自 DASHBOARD_DATA.personnel.overview.avg） */
+  const totalAvgHeadcount=DASHBOARD_DATA.personnel&&DASHBOARD_DATA.personnel.overview&&DASHBOARD_DATA.personnel.overview.avg||0;
+  const avgPerCapita=totalAvgHeadcount>0?(f.efficiency.laborCost/totalAvgHeadcount).toFixed(2):'—';
+  const revRate=f.efficiency.targets[0]&&f.efficiency.targets[0].target?(f.efficiency.targets[0].done/f.efficiency.targets[0].target*100).toFixed(1):0;
+  const profitRate=f.efficiency.targets[1]&&f.efficiency.targets[1].target?(f.efficiency.targets[1].done/f.efficiency.targets[1].target*100).toFixed(1):0;
+  const defaultCards=[
+    {label:"净合同额",rate:"完成比 "+f.netContract.rate+"%",yoy:"同比 "+(f.netContract.yoy>=0?'+':'')+f.netContract.yoy+"%",yoyType:f.netContract.yoy>=0?"up":"down",sub:"年度目标 "+f.netContract.yearTarget+"万"},
+    {label:"管理净营收",rate:"完成比 "+f.revenue.rate+"%",yoy:"同比 "+(f.revenue.yoy>=0?'+':'')+f.revenue.yoy+"%",yoyType:f.revenue.yoy>=0?"up":"down",sub:"年度目标 "+f.revenue.yearTarget+"万"},
+    {label:"管理利润",rate:"完成比 "+f.profit.rate+"%",yoy:"同比 "+(f.profit.yoy>=0?'+':'')+f.profit.yoy+"%",yoyType:f.profit.yoy>=0?"up":"down",sub:"年度目标 "+f.profit.yearTarget+"万"},
+    {label:"人工成本",rate:"人均 "+avgPerCapita+"万",yoy:"含25年终奖",yoyType:"up",sub:"月度+年终综合"},
+    {label:"元均管理净营收",rate:"完成比 "+revRate+"%",yoy:"目标 "+f.efficiency.targets[0].target,yoyType:parseFloat(revRate)>=100?"up":"down",sub:"管理净营收÷人工成本"},
+    {label:"元均管理利润",rate:"完成比 "+profitRate+"%",yoy:"目标 "+f.efficiency.targets[1].target,yoyType:parseFloat(profitRate)>=100?"up":"down",sub:"管理利润÷人工成本"}
+  ];
+  /* 用户可自定义的标签（仅在 kpiCards 中存在时使用 label，其他字段始终用实际数据） */
+  const t=DASHBOARD_DATA.kpiCards||[];
+  const meta=[
+    {value:f.netContract.quarterDone,unit:"万元",icon:"📄",color:"#0080ff"},
+    {value:f.revenue.quarterDone,unit:"万元",icon:"💰",color:"#22c55e"},
+    {value:f.profit.quarterDone,unit:"万元",icon:"📈",color:"#fb923c"},
+    {value:f.efficiency.laborCost,unit:"万元",icon:"👥",color:"#a855f7"},
+    {value:f.efficiency.targets[0].done,unit:"元/元",icon:"⚖",color:"#06b6d4"},
+    {value:f.efficiency.targets[1].done,unit:"元/元",icon:"🎯",color:"#ec4899"}
+  ];
+  const cards=meta.map((m,i)=>{
+    const c=t[i]||{};
+    return {...m,
+      label:c.label||defaultCards[i].label,
+      rate:defaultCards[i].rate,
+      yoy:defaultCards[i].yoy,
+      yoyType:defaultCards[i].yoyType,
+      sub:defaultCards[i].sub};
+  });
+  document.getElementById('kpiGrid').innerHTML=cards.map((k,i)=>`
+    <div class="kpi-card" style="border-top-color:${k.color}" onclick="drillOverview(${i})">
+      <div class="kpi-icon" style="background:${k.color}1a;color:${k.color}">${k.icon}</div>
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}<span class="unit">${k.unit}</span></div>
+      <div class="kpi-trend">
+        <span class="rate">${k.rate}</span>
+        <span class="yoy ${k.yoyType}">${k.yoyType==='up'?'▲':'▼'} ${k.yoy}</span>
+      </div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>
+  `).join('');
+  renderOverviewSummary();
+}
+
+/* 渲染整体小结（纯文本格式，自动识别"下降/亏损"标红、"增长/提升"标绿） */
+function renderOverviewSummary(){
+  const el=document.getElementById('overviewSummary');
+  if(!el)return;
+  let text=DASHBOARD_DATA.overviewSummary||'';
+  /* 先去掉旧的 HTML 标签，避免重复包裹（兼容历史数据） */
+  text=text.replace(/<[^>]+>/g,'');
+  /* 自动标记下降/亏损为红，规则：下降\d*%、下滑\d*%、降低\d*%、减少\d*%、亏损、负增长 */
+  text=text.replace(/((?:下降|下滑|降低|减少|下挫|负增长)\s*\d*\.?\d*%?)/g,'<span class="delta-down">$1</span>');
+  text=text.replace(/(亏损|负值|亏损面|入不敷出)/g,'<span class="delta-down">$1</span>');
+  /* 自动标记上升/增长为绿 */
+  text=text.replace(/((?:上升|增长|提升|增加|上扬|正增长)\s*\d*\.?\d*%?)/g,'<span class="delta-up">$1</span>');
+  text=text.replace(/(盈利|扭亏|改善)/g,'<span class="delta-up">$1</span>');
+  el.innerHTML='<b>整体小结：</b>'+text;
+}
+
+/* KPI 下钻 */
+function drillOverview(idx){
+  const f=DASHBOARD_DATA.financial;
+  const titles=['净合同额','管理净营收','管理利润','人工成本','元均管理净营收','元均管理利润'];
+  const dataMap=[f.netContract,f.revenue,f.profit,null,f.efficiency,f.efficiency];
+  const data=dataMap[idx];
+  let body='';
+  if(idx<3){
+    const d=data;
+    body=`
+      <div class="drill-stat-grid">
+        <div class="drill-stat"><div class="l">年度目标</div><div class="v">${d.yearTarget}<span class="u">万元</span></div></div>
+        <div class="drill-stat"><div class="l">三季度完成</div><div class="v">${d.quarterDone}<span class="u">万元</span></div></div>
+        <div class="drill-stat"><div class="l">完成比</div><div class="v">${d.rate}<span class="u">%</span></div></div>
+        <div class="drill-stat"><div class="l">同比变化</div><div class="v ${d.yoy>=0?'delta-up':'delta-down'}">${d.yoy>=0?'+':''}${d.yoy}<span class="u">%</span></div></div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>公司</th><th>目标值(万)</th><th>完成值(万)</th><th>完成比</th><th>去年同期(万)</th><th>同比</th></tr></thead>
+          <tbody>
+            ${d.companies.map(c=>{
+              const rate=(c.done/c.target*100).toFixed(1);
+              const yoy=c.lastYear?((c.done-c.lastYear)/c.lastYear*100).toFixed(0):'—';
+              const yoyClass=c.lastYear&&((c.done-c.lastYear)/c.lastYear)>=0?'delta-up':'delta-down';
+              return `<tr>
+                <td><b>${c.company}</b></td>
+                <td>${c.target}</td>
+                <td>${c.done}</td>
+                <td>${rate}%</td>
+                <td>${c.lastYear||'—'}</td>
+                <td class="${yoyClass}">${yoy==='—'?'—':(yoy+'%')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }else if(idx===3){
+    body=`
+      <div class="drill-stat-grid">
+        <div class="drill-stat"><div class="l">人工成本合计</div><div class="v">${f.efficiency.laborCost}<span class="u">万元</span></div></div>
+        <div class="drill-stat"><div class="l">月度现金流</div><div class="v">${f.laborCost.reduce((s,c)=>s+(c.monthly||0),0).toFixed(2)}<span class="u">万元</span></div></div>
+        <div class="drill-stat"><div class="l">25年年终奖</div><div class="v">${f.laborCost.reduce((s,c)=>s+(c.yearBonus||0),0).toFixed(2)}<span class="u">万元</span></div></div>
+        <div class="drill-stat"><div class="l">人均成本</div><div class="v">${(DASHBOARD_DATA.personnel&&DASHBOARD_DATA.personnel.overview&&DASHBOARD_DATA.personnel.overview.avg>0?(f.efficiency.laborCost/DASHBOARD_DATA.personnel.overview.avg).toFixed(2):'—')}<span class="u">万元</span></div></div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>公司</th><th>平均人数</th><th>月度成本(万)</th><th>年终奖(万)</th><th>合计(万)</th><th>人均成本(万)</th></tr></thead>
+          <tbody>
+            ${f.laborCost.map(c=>`<tr><td><b>${c.company}</b></td><td>${c.avgCount}</td><td>${c.monthly}</td><td>${c.yearBonus}</td><td>${c.total}</td><td>${c.perCapita}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }else{
+    const t=f.efficiency.targets[idx-4];
+    body=`
+      <div class="drill-stat-grid">
+        <div class="drill-stat"><div class="l">目标值</div><div class="v">${t.target}<span class="u">元/元</span></div></div>
+        <div class="drill-stat"><div class="l">完成值</div><div class="v">${t.done}<span class="u">元/元</span></div></div>
+        <div class="drill-stat"><div class="l">完成比</div><div class="v">${(t.done/t.target*100).toFixed(1)}<span class="u">%</span></div></div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>公司</th><th>管理净营收(万)</th><th>管理利润(万)</th><th>人工成本(万)</th><th>元均净营收</th><th>元均利润</th></tr></thead>
+          <tbody>
+            ${f.efficiency.companies.map(c=>`<tr><td><b>${c.company}</b></td><td>${c.revenue}</td><td>${c.profit}</td><td>${c.cost}</td><td>${c.revenuePer}</td><td class="${c.profitPer>=0?'delta-up':'delta-down'}">${c.profitPer}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  openDrillModal(titles[idx]+' · 详情',body);
+}
+
+/* ============================================================
+   渲染：人员情况
+   ============================================================ */
+function renderPersonnel(){
+  const d=DASHBOARD_DATA.personnel;
+  const o=d.overview;
+  document.getElementById('personnelKpi').innerHTML=[
+    {l:"期初人数",v:o.initial,c:"#64748b"},
+    {l:"新增人数",v:o.newAdd,c:"#22c55e"},
+    {l:"离职人数",v:o.resigned,c:"#ef4444"},
+    {l:"调出/调入",v:o.transferOut+"/"+o.transferIn,c:"#fb923c"},
+    {l:"期末人数",v:o.end,c:"#0080ff"},
+    {l:"平均人数",v:o.avg,c:"#a855f7"}
+  ].map(k=>`
+    <div class="kpi-mini" style="border-top:3px solid ${k.c}">
+      <div class="v" style="color:${k.c}">${k.v}</div>
+      <div class="l">${k.l}</div>
+    </div>
+  `).join('');
+
+  chartInstances.headcount=echarts.init(document.getElementById('chart-headcount'));
+  chartInstances.headcount.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['期末人数','平均人数'],top:0,textStyle:{color:'#475569'}},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:d.companyHeadcount.map(c=>c.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:{type:'value',...AXIS_STYLE},
+    series:[
+      {name:'期末人数',type:'bar',data:d.companyHeadcount.map(c=>c.end),
+        itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#3b9eff'},{offset:1,color:'#0066cc'}]),borderRadius:[4,4,0,0]},barWidth:18},
+      {name:'平均人数',type:'bar',data:d.companyHeadcount.map(c=>c.avg),
+        itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#67e8f9'},{offset:1,color:'#06b6d4'}]),borderRadius:[4,4,0,0]},barWidth:18}
+    ]
+  });
+  chartInstances.headcount.on('click',p=>drillPersonnel(p.name));
+
+  chartInstances.resign=echarts.init(document.getElementById('chart-resign'));
+  chartInstances.resign.setOption({
+    tooltip:{trigger:'item',formatter:'{b}: {c}人 ({d}%)'},
+    legend:{bottom:0,textStyle:{color:'#475569'}},
+    series:[{type:'pie',radius:['40%','70%'],center:['50%','45%'],
+      label:{formatter:'{b}\n{c}人'},
+      data:d.resignByCompany.map((c,i)=>({name:c.company,value:c.count,itemStyle:{color:COLORS.palette[i]}}))}]
+  });
+
+  /* 离职人员明细表（九宫格落位 + 人员定位） */
+  const talentColor=(t)=>{
+    if(!t)return 'tag-gray';
+    if(t.indexOf('核心')>-1)return 'tag-red';
+    if(t.indexOf('骨干')>-1)return 'tag-orange';
+    if(t.indexOf('关注')>-1)return 'tag-blue';
+    if(t.indexOf('稳定')>-1)return 'tag-green';
+    if(t.indexOf('重点反馈')>-1)return 'tag-purple';
+    return 'tag-gray';
+  };
+  const gridColor=(g)=>{
+    if(g==='未盘点'||!g)return '#94a3b8';
+    const n=Number(g);
+    if(n>=7)return '#ef4444';
+    if(n>=5)return '#fb923c';
+    if(n>=3)return '#0080ff';
+    return '#22c55e';
+  };
+  const resignDetail=d.resignDetail||[];
+  document.getElementById('resignDetailTable').innerHTML=resignDetail.length?`
+    <table class="data-table">
+      <thead><tr><th>离职人员</th><th>对应公司</th><th>九宫格落位</th><th>人员定位</th></tr></thead>
+      <tbody>
+        ${resignDetail.map(r=>`<tr>
+          <td><b style="color:#0080ff">${r.name||''}</b></td>
+          <td>${r.company||''}</td>
+          <td><span style="display:inline-block;min-width:32px;padding:3px 12px;border-radius:6px;background:${gridColor(r.grid)};color:#fff;font-weight:700;text-align:center">${r.grid||'—'}</span></td>
+          <td><span class="tag ${talentColor(r.talent)}">${r.talent||'—'}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `:'<div style="padding:14px;color:var(--text-sub);font-size:13px">暂无离职人员明细</div>';
+
+  chartInstances.age=echarts.init(document.getElementById('chart-age'));
+  chartInstances.age.setOption({
+    tooltip:{trigger:'item',formatter:'{b}: {c}%'},
+    series:[{type:'pie',radius:['50%','75%'],center:['50%','50%'],
+      label:{formatter:'{b}\n{c}%',fontSize:11},
+      data:d.ageDistribution.map((a,i)=>({name:a.range,value:a.percent,itemStyle:{color:COLORS.palette[i]}}))}]
+  });
+
+  chartInstances.tenure=echarts.init(document.getElementById('chart-tenure'));
+  chartInstances.tenure.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>p[0].name+'<br/>人数: '+p[0].value+'<br/>占比: '+d.tenureDistribution[p[0].dataIndex].percent+'%'},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:d.tenureDistribution.map(t=>t.range),axisLabel:{fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:[{type:'value',name:'人数',...AXIS_STYLE},{type:'value',name:'占比%',max:100,...AXIS_STYLE}],
+    series:[{type:'bar',data:d.tenureDistribution.map(t=>({
+      value:t.count,
+      itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#c084fc'},{offset:1,color:'#7e22ce'}]),borderRadius:[4,4,0,0]}})),barWidth:'40%'}]
+  });
+
+  chartInstances.avgAge=echarts.init(document.getElementById('chart-avgAge'));
+  chartInstances.avgAge.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>p[0].name+': '+p[0].value+'岁'},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:d.avgAgeByCompany.map(c=>c.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:{type:'value',name:'岁',...AXIS_STYLE},
+    series:[{type:'bar',data:d.avgAgeByCompany.map(c=>({
+      value:c.age,
+      itemStyle:{color:c.age>=40?new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#fb923c'},{offset:1,color:'#c2410c'}]):new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#4ade80'},{offset:1,color:'#15803d'}]),borderRadius:[4,4,0,0]}})),
+      label:{show:true,position:'top',formatter:'{c}岁',fontSize:10,color:'#0066cc'},barWidth:'50%'}]
+  });
+
+  /* 调入人员明细表 */
+  const transferIn=d.transferIn||[];
+  document.getElementById('transferInTable').innerHTML=transferIn.length?`
+    <table class="data-table">
+      <thead><tr><th>调入人员姓名</th><th>异动类型</th><th>调出部门/公司</th><th>调入部门/公司</th></tr></thead>
+      <tbody>
+        ${transferIn.map(r=>`<tr>
+          <td><b style="color:#0080ff">${r.name||''}</b></td>
+          <td><span class="tag tag-blue">${r.type||'调入'}</span></td>
+          <td>${r.from||'—'}</td>
+          <td>${r.to||'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `:'<div style="padding:14px;color:var(--text-sub);font-size:13px">暂无调入人员记录</div>';
+
+  /* 调出人员明细表 */
+  const transferOut=d.transferOut||[];
+  document.getElementById('transferOutTable').innerHTML=transferOut.length?`
+    <table class="data-table">
+      <thead><tr><th>调出人员姓名</th><th>异动类型</th><th>调出部门/公司</th><th>调入部门/公司</th></tr></thead>
+      <tbody>
+        ${transferOut.map(r=>`<tr>
+          <td><b style="color:#0080ff">${r.name||''}</b></td>
+          <td><span class="tag tag-orange">${r.type||'调出'}</span></td>
+          <td>${r.from||'—'}</td>
+          <td>${r.to||'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `:'<div style="padding:14px;color:var(--text-sub);font-size:13px">暂无调出人员记录</div>';
+}
+
+function drillPersonnel(companyName){
+  const c=DASHBOARD_DATA.personnel.companyHeadcount.find(x=>x.company===companyName);
+  if(!c)return;
+  const body=`
+    <div class="drill-stat-grid">
+      <div class="drill-stat"><div class="l">期末人数</div><div class="v">${c.end}<span class="u">人</span></div></div>
+      <div class="drill-stat"><div class="l">平均人数</div><div class="v">${c.avg}<span class="u">人</span></div></div>
+      <div class="drill-stat"><div class="l">人数差异</div><div class="v">${(c.end-c.avg).toFixed(2)}<span class="u">人</span></div></div>
+    </div>
+    <div class="modal-tip">📋 ${companyName} 人员情况详情。可在「编辑数据」中修改人数信息。</div>
+  `;
+  openDrillModal(companyName+' · 人员详情',body);
+}
+
+/* ============================================================
+   渲染：关键经济指标
+   ============================================================ */
+function renderFinancial(){
+  const f=DASHBOARD_DATA.financial;
+  chartInstances.contract=echarts.init(document.getElementById('chart-contract'));
+  chartInstances.contract.setOption(financialBarOption(f.netContract,'万元'));
+  chartInstances.contract.on('click',p=>drillFinancial('netContract',p.name));
+
+  chartInstances.revenue=echarts.init(document.getElementById('chart-revenue'));
+  chartInstances.revenue.setOption(financialBarOption(f.revenue,'万元'));
+  chartInstances.revenue.on('click',p=>drillFinancial('revenue',p.name));
+
+  chartInstances.profit=echarts.init(document.getElementById('chart-profit'));
+  chartInstances.profit.setOption(financialBarOption(f.profit,'万元'));
+  chartInstances.profit.on('click',p=>drillFinancial('profit',p.name));
+
+  /* 元均净营收完成情况（7家公司） */
+  chartInstances.efficiencyRevenue=echarts.init(document.getElementById('chart-efficiency-revenue'));
+  chartInstances.efficiencyRevenue.setOption(efficiencyCompanyBarOption(f.efficiency.companies,'元均净营收','revenuePer'));
+
+  /* 元均利润完成情况（7家公司） */
+  chartInstances.efficiencyProfit=echarts.init(document.getElementById('chart-efficiency-profit'));
+  chartInstances.efficiencyProfit.setOption(efficiencyCompanyBarOption(f.efficiency.companies,'元均利润','profitPer'));
+
+  chartInstances.laborCost=echarts.init(document.getElementById('chart-laborCost'));
+  chartInstances.laborCost.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+      formatter:p=>{
+        const c=f.laborCost[p[0].dataIndex];
+        return c.company+'<br/>'+p.map(x=>x.marker+x.seriesName+': '+x.value+'万').join('<br/>')+'<br/>人均成本: '+c.perCapita+'万';
+      }},
+    legend:{data:['月度人工成本','年终奖','人工成本合计'],top:0,textStyle:{color:'#475569'}},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:f.laborCost.map(c=>c.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:{type:'value',name:'万元',...AXIS_STYLE},
+    series:[
+      {name:'月度人工成本',type:'bar',stack:'cost',data:f.laborCost.map(c=>c.monthly),itemStyle:{color:'#3b9eff'}},
+      {name:'年终奖',type:'bar',stack:'cost',data:f.laborCost.map(c=>c.yearBonus),itemStyle:{color:'#fb923c'}},
+      {name:'人工成本合计',type:'line',data:f.laborCost.map(c=>c.total),itemStyle:{color:'#a855f7'},lineStyle:{width:3},symbolSize:8,
+        label:{show:true,position:'top',formatter:'{c}万',fontSize:10,color:'#7e22ce'}}
+    ]
+  });
+}
+
+function financialBarOption(data,unit){
+  const companies=data.companies;
+  return {
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+      formatter:p=>{
+        const c=companies[p[0].dataIndex];
+        const rate=(c.target?(c.done/c.target*100):0).toFixed(1);
+        return c.company+'<br/>目标: '+c.target+' '+unit+'<br/>完成: '+c.done+' '+unit+'<br/>完成比: '+rate+'%<br/>去年同期: '+c.lastYear+' '+unit;
+      }},
+    legend:{data:['目标值','完成值','完成比'],top:0,textStyle:{color:'#475569'}},
+    grid:{left:'3%',right:'8%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:companies.map(c=>c.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:[
+      {type:'value',name:unit,...AXIS_STYLE},
+      {type:'value',name:'完成比(%)',max:100,position:'right',
+        axisLabel:{formatter:'{value}%',color:'#475569'},
+        nameTextStyle:{color:'#475569'},
+        axisLine:{lineStyle:{color:'#cbd5e1'}},
+        axisTick:{lineStyle:{color:'#cbd5e1'}},
+        splitLine:{show:false}}
+    ],
+    series:[
+      {name:'目标值',type:'bar',data:companies.map(c=>c.target),
+        itemStyle:{color:COLORS.targetGrayLight,borderRadius:[4,4,0,0]},barWidth:14,
+        label:{show:true,position:'top',formatter:p=>companies[p.dataIndex].target,fontSize:10,color:'#64748b'}},
+      {name:'完成值',type:'bar',data:companies.map(c=>({
+        value:c.done,
+        itemStyle:{color:c.done<0?new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#f87171'},{offset:1,color:'#b91c1c'}]):
+          new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#3b9eff'},{offset:1,color:'#0066cc'}]),
+          borderRadius:[4,4,0,0]}})),barWidth:14,
+        label:{show:true,position:'top',formatter:p=>companies[p.dataIndex].done,fontSize:10,color:'#0066cc'}},
+      {name:'完成比',type:'line',yAxisIndex:1,data:companies.map(c=>c.target?(c.done/c.target*100):0),
+        itemStyle:{color:'#fb923c'},
+        lineStyle:{type:'dashed',width:1.5},
+        symbolSize:6,
+        symbol:'circle',
+        z:10}
+    ]
+  };
+}
+
+function drillFinancial(type,companyName){
+  const data=DASHBOARD_DATA.financial[type];
+  const c=data.companies.find(x=>x.company===companyName);
+  if(!c)return;
+  const typeName={netContract:'净合同额',revenue:'管理净营收',profit:'管理利润'}[type];
+  const rate=(c.done/c.target*100).toFixed(1);
+  const yoy=c.lastYear?((c.done-c.lastYear)/Math.abs(c.lastYear)*100).toFixed(1):'—';
+  const body=`
+    <div class="drill-stat-grid">
+      <div class="drill-stat"><div class="l">年度目标</div><div class="v">${c.target}<span class="u">万元</span></div></div>
+      <div class="drill-stat"><div class="l">三季度完成</div><div class="v">${c.done}<span class="u">万元</span></div></div>
+      <div class="drill-stat"><div class="l">完成比</div><div class="v">${rate}<span class="u">%</span></div></div>
+      <div class="drill-stat"><div class="l">去年同期</div><div class="v">${c.lastYear||'—'}<span class="u">万元</span></div></div>
+      <div class="drill-stat"><div class="l">同比变化</div><div class="v ${yoy==='—'?'':(parseFloat(yoy)>=0?'delta-up':'delta-down')}">${yoy==='—'?'—':(yoy+'%')}</div></div>
+    </div>
+    <div class="modal-tip">💡 ${companyName} ${typeName} 三季度完成 ${c.done} 万元，完成比 ${rate}%，${parseFloat(yoy)>=0?'同比增长':'同比下降'} ${Math.abs(yoy)}%。</div>
+  `;
+  openDrillModal(companyName+' · '+typeName+'详情',body);
+}
+
+/* 元效每家公司图表（目标值 vs 完成值 + 完成比次轴） */
+function efficiencyCompanyBarOption(companies,metricLabel,key){
+  const overallTarget=DASHBOARD_DATA.financial.efficiency.targets.find(function(t){
+    if(key==='revenuePer')return t.name.indexOf('净营收')>-1;
+    if(key==='profitPer')return t.name.indexOf('利润')>-1;
+    return false;
+  });
+  const overallTargetVal=overallTarget?overallTarget.target:0;
+  /* 每家公司独立的目标值（与编辑弹窗一致） */
+  const targetKey=key==='revenuePer'?'revenueTarget':'profitTarget';
+  const perCompanyTargets=companies.map(function(c){return (c&&c[targetKey]!==undefined&&c[targetKey]!==0)?c[targetKey]:overallTargetVal;});
+  return {
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+      formatter:function(p){
+        var c=companies[p[0].dataIndex];
+        var actual=(c&&c[key])?c[key]:0;
+        var rt=perCompanyTargets[p[0].dataIndex];
+        var rate=rt?(actual/rt*100).toFixed(1):0;
+        return c.company+'<br/>目标值: '+rt.toFixed(3)+'<br/>完成值: '+actual.toFixed(3)+'<br/>完成比: '+rate+'%';
+      }},
+    legend:{data:['目标值','完成值','完成比'],top:0,textStyle:{color:'#475569'}},
+    grid:{left:'3%',right:'8%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:companies.map(function(c){return c.company;}),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:[
+      {type:'value',name:metricLabel,...AXIS_STYLE},
+      {type:'value',name:'完成比(%)',max:150,position:'right',
+        axisLabel:{formatter:'{value}%',color:'#475569'},
+        nameTextStyle:{color:'#475569'},
+        axisLine:{lineStyle:{color:'#cbd5e1'}},
+        axisTick:{lineStyle:{color:'#cbd5e1'}},
+        splitLine:{show:false}}
+    ],
+    series:[
+      {name:'目标值',type:'bar',data:perCompanyTargets,
+        itemStyle:{color:COLORS.targetGrayLight,borderRadius:[4,4,0,0]},barWidth:14,
+        label:{show:true,position:'top',formatter:function(p){return p.value.toFixed(3);},fontSize:10,color:'#64748b'}},
+      {name:'完成值',type:'bar',data:companies.map(function(c){return (c&&c[key])?c[key]:0;}),
+        itemStyle:{color:function(p){return (p.value<0)?new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#f87171'},{offset:1,color:'#b91c1c'}]):new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#3b9eff'},{offset:1,color:'#0066cc'}]);},
+          borderRadius:[4,4,0,0]},barWidth:14,
+        label:{show:true,position:'top',formatter:function(p){return Number(p.value).toFixed(3);},fontSize:10,color:'#0066cc'}},
+      {name:'完成比',type:'line',yAxisIndex:1,data:perCompanyTargets.map(function(rt,i){var c=companies[i];var v=(c&&c[key])?c[key]:0;return rt?(v/rt*100):0;}),
+        itemStyle:{color:'#fb923c'},
+        lineStyle:{type:'dashed',width:1.5},
+        symbolSize:6,
+        symbol:'circle',
+        z:10}
+    ]
+  };
+}
+
+/* ============================================================
+   渲染：产能
+   ============================================================ */
+function renderCapacity(){
+  const c=DASHBOARD_DATA.capacity;
+  chartInstances.capacity=echarts.init(document.getElementById('chart-capacity'));
+  chartInstances.capacity.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+      formatter:p=>{const d=c.companies[p[0].dataIndex];return d.company+'<br/>实际产能: '+d.actual+'万<br/>标准产能: '+d.standard+'万<br/>转化率: '+d.rate+'%';}},
+    legend:{data:['实际产能','标准产能'],top:0,textStyle:{color:'#475569'}},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:c.companies.map(x=>x.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:{type:'value',name:'万元',...AXIS_STYLE},
+    series:[
+      {name:'实际产能',type:'bar',data:c.companies.map(x=>x.actual),
+        itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#fdba74'},{offset:1,color:'#c2410c'}]),borderRadius:[4,4,0,0]},barWidth:18,
+        label:{show:true,position:'top',fontSize:10,color:'#9a3412'}},
+      {name:'标准产能',type:'bar',data:c.companies.map(x=>x.standard),
+        itemStyle:{color:COLORS.targetGrayLight,borderRadius:[4,4,0,0]},barWidth:18,
+        label:{show:true,position:'top',formatter:p=>c.companies[p.dataIndex].standard,fontSize:10,color:'#64748b'}}
+    ]
+  });
+  chartInstances.capacity.on('click',p=>drillCapacity(p.name));
+
+  chartInstances.capacityRate=echarts.init(document.getElementById('chart-capacityRate'));
+  chartInstances.capacityRate.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>p[0].name+': '+p[0].value+'%'},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:c.companies.map(x=>x.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:{type:'value',name:'%',max:100,...AXIS_STYLE},
+    series:[{type:'bar',data:c.companies.map(x=>({
+      value:x.rate,
+      itemStyle:{color:x.rate>=65?new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#4ade80'},{offset:1,color:'#15803d'}]):
+        (x.rate>=55?new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#fbbf24'},{offset:1,color:'#b45309'}]):
+        new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#f87171'},{offset:1,color:'#b91c1c'}])),
+        borderRadius:[4,4,0,0]}})),
+      label:{show:true,position:'top',formatter:'{c}%',fontSize:11,fontWeight:'bold',color:'#0066cc'},barWidth:'45%'}]
+  });
+}
+
+function drillCapacity(companyName){
+  const c=DASHBOARD_DATA.capacity.companies.find(x=>x.company===companyName);
+  if(!c)return;
+  const gap=c.standard-c.actual;
+  const body=`
+    <div class="drill-stat-grid">
+      <div class="drill-stat"><div class="l">实际产能</div><div class="v">${c.actual}<span class="u">万元</span></div></div>
+      <div class="drill-stat"><div class="l">标准产能</div><div class="v">${c.standard}<span class="u">万元</span></div></div>
+      <div class="drill-stat"><div class="l">产能转化率</div><div class="v">${c.rate}<span class="u">%</span></div></div>
+      <div class="drill-stat"><div class="l">产能缺口</div><div class="v ${gap>0?'delta-down':'delta-up'}">${gap.toFixed(0)}<span class="u">万元</span></div></div>
+    </div>
+    <div class="modal-tip">⚙ ${companyName} 三季度实际产能 ${c.actual} 万元，标准产能 ${c.standard} 万元，产能转化率 ${c.rate}%，${c.rate<60?'<b>产能转化率偏低</b>，需盘活闲置产能资源':'产能利用较为充分'}。</div>
+  `;
+  openDrillModal(companyName+' · 产能详情',body);
+}
+
+/* ============================================================
+   渲染：生产人员绩效
+   ============================================================ */
+function renderPerformance(){
+  const g=DASHBOARD_DATA.performance.groups;
+  const container=document.getElementById('performanceCharts');
+  container.innerHTML=g.map((grp,i)=>`
+    <div class="chart-box">
+      <h3>${grp.company} — ${grp.totalDeduct<0?'激励 <span style="color:#15803d">'+Math.abs(grp.totalDeduct)+'</span>':'扣减 '+grp.totalDeduct} 元</h3>
+      <div class="chart" id="chart-perf-${i}"></div>
+    </div>
+  `).join('');
+  g.forEach((grp,i)=>{
+    const chart=echarts.init(document.getElementById('chart-perf-'+i));
+    chartInstances['perf'+i]=chart;
+    chart.setOption({
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+        formatter:p=>{const person=grp.people[p[0].dataIndex];return person.name+'<br/>产值: '+person.value+'万<br/>奖金变化: '+(person.bonus*100).toFixed(1)+'%';}},
+      legend:{data:['产值(万)','奖金变化比(%)'],top:0,textStyle:{color:'#475569'}},
+      grid:{left:'3%',right:'4%',bottom:'8%',containLabel:true},
+      xAxis:{type:'category',data:grp.people.map(p=>p.name),axisLabel:{rotate:90,fontSize:10,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+      yAxis:[{type:'value',name:'产值',...AXIS_STYLE},{type:'value',name:'奖金变化%',axisLabel:{formatter:'{value}%',color:'#475569'},...AXIS_STYLE}],
+      series:[
+        {name:'产值(万)',type:'bar',data:grp.people.map(p=>p.value),
+          itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#3b9eff'},{offset:1,color:'#0066cc'}]),borderRadius:[4,4,0,0]},barWidth:'40%'},
+        {name:'奖金变化比(%)',type:'line',yAxisIndex:1,data:grp.people.map(p=>(p.bonus*100).toFixed(1)),
+          itemStyle:{color:'#fb923c'},lineStyle:{width:2},symbolSize:6,
+          markLine:{data:[{yAxis:0}],lineStyle:{color:'#94a3b8',type:'dashed'}}}
+      ]
+    });
+    chart.on('click',p=>drillPerformance(i,p.name));
+  });
+}
+
+function drillPerformance(groupIdx,personName){
+  const grp=DASHBOARD_DATA.performance.groups[groupIdx];
+  const p=grp.people.find(x=>x.name===personName);
+  if(!p)return;
+  const bonusType=p.bonus>=0?'奖励':'扣减';
+  const body=`
+    <div class="drill-stat-grid">
+      <div class="drill-stat"><div class="l">所属公司</div><div class="v" style="font-size:16px">${grp.company}</div></div>
+      <div class="drill-stat"><div class="l">三季度产值</div><div class="v">${p.value}<span class="u">万元</span></div></div>
+      <div class="drill-stat"><div class="l">奖金变化比</div><div class="v ${p.bonus>=0?'delta-up':'delta-down'}">${(p.bonus*100).toFixed(1)}<span class="u">%</span></div></div>
+      <div class="drill-stat"><div class="l">${bonusType}类型</div><div class="v" style="font-size:16px;color:${p.bus>=0?'#15803d':'#b91c1c'}">${bonusType}</div></div>
+    </div>
+    <div class="modal-tip">📈 ${personName}（${grp.company}）三季度产值 ${p.value} 万元，绩效奖金${bonusType} ${(Math.abs(p.bonus)*100).toFixed(1)}%。${p.bonus<0?'<b>产值未达标</b>，建议开展专项帮扶与能力提升。':'<b>表现优秀</b>，建议加强正向激励与表彰。'}</div>
+  `;
+  openDrillModal(personName+' · 绩效详情',body);
+}
+
+/* ============================================================
+   渲染：工时闭环率
+   ============================================================ */
+function renderWorkhours(){
+  const w=DASHBOARD_DATA.workhours;
+  chartInstances.workhours=echarts.init(document.getElementById('chart-workhours'));
+  chartInstances.workhours.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>p[0].name+'<br/>'+p.map(x=>x.marker+x.seriesName+': '+x.value+'%').join('<br/>')},
+    legend:{data:['工时闭环率','有效工时闭环率'],top:0,textStyle:{color:'#475569'}},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:w.companies.map(c=>c.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:{type:'value',name:'%',max:100,...AXIS_STYLE},
+    series:[
+      {name:'工时闭环率',type:'bar',data:w.companies.map(c=>c.closeRate),
+        itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#4ade80'},{offset:1,color:'#15803d'}]),borderRadius:[4,4,0,0]},barWidth:16},
+      {name:'有效工时闭环率',type:'bar',data:w.companies.map(c=>c.validRate),
+        itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#67e8f9'},{offset:1,color:'#0e7490'}]),borderRadius:[4,4,0,0]},barWidth:16}
+    ]
+  });
+  chartInstances.workhours.on('click',p=>drillWorkhours(p.name));
+
+  chartInstances.workhoursBar=echarts.init(document.getElementById('chart-workhoursBar'));
+  chartInstances.workhoursBar.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+      formatter:p=>{const c=w.companies[p[0].dataIndex];return c.company+'<br/>应出勤: '+c.should+'h<br/>已报工: '+c.reported+'h<br/>项目工时: '+c.project+'h';}},
+    legend:{data:['应出勤工时','报工工时','项目工时'],top:0,textStyle:{color:'#475569'}},
+    grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+    xAxis:{type:'category',data:w.companies.map(c=>c.company),axisLabel:{rotate:90,fontSize:11,interval:0,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    yAxis:{type:'value',name:'小时',...AXIS_STYLE},
+    series:[
+      {name:'应出勤工时',type:'bar',data:w.companies.map(c=>c.should),itemStyle:{color:COLORS.targetGrayLight,borderRadius:[4,4,0,0]},barWidth:12},
+      {name:'报工工时',type:'bar',data:w.companies.map(c=>c.reported),itemStyle:{color:'#3b9eff',borderRadius:[4,4,0,0]},barWidth:12},
+      {name:'项目工时',type:'bar',data:w.companies.map(c=>c.project),itemStyle:{color:'#fb923c',borderRadius:[4,4,0,0]},barWidth:12}
+    ]
+  });
+
+  document.getElementById('lowReportTable').innerHTML=`
+    <table class="data-table">
+      <thead><tr><th>员工姓名</th><th>所在部门</th><th>工时闭环率</th><th>有效工时闭环率</th><th>状态</th></tr></thead>
+      <tbody>
+        ${w.lowReport.map(r=>{
+          const status=r.closeRate===0?'<span class="tag tag-red">零闭环</span>':(r.closeRate<60?'<span class="tag tag-orange">低闭环</span>':'<span class="tag tag-blue">待提升</span>');
+          return `<tr onclick="drillLowReport('${r.name}','${r.dept}',${r.closeRate},${r.validRate})">
+            <td><b>${r.name}</b></td><td>${r.dept}</td><td>${r.closeRate}%</td><td>${r.validRate}%</td><td>${status}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function drillWorkhours(companyName){
+  const c=DASHBOARD_DATA.workhours.companies.find(x=>x.company===companyName);
+  if(!c)return;
+  const lowList=DASHBOARD_DATA.workhours.lowReport.filter(r=>r.dept===companyName);
+  const body=`
+    <div class="drill-stat-grid">
+      <div class="drill-stat"><div class="l">人数</div><div class="v">${c.count}<span class="u">人</span></div></div>
+      <div class="drill-stat"><div class="l">应出勤工时</div><div class="v">${c.should}<span class="u">h</span></div></div>
+      <div class="drill-stat"><div class="l">报工工时</div><div class="v">${c.reported}<span class="u">h</span></div></div>
+      <div class="drill-stat"><div class="l">项目工时</div><div class="v">${c.project}<span class="u">h</span></div></div>
+      <div class="drill-stat"><div class="l">工时闭环率</div><div class="v">${c.closeRate}<span class="u">%</span></div></div>
+      <div class="drill-stat"><div class="l">有效闭环率</div><div class="v">${c.validRate}<span class="u">%</span></div></div>
+    </div>
+    ${lowList.length?`
+      <h4 style="margin:14px 0 10px;color:#b91c1c;font-size:14px">⚠ ${companyName} 低报工人员名单</h4>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>姓名</th><th>工时闭环率</th><th>有效闭环率</th></tr></thead>
+          <tbody>${lowList.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.closeRate}%</td><td>${r.validRate}%</td></tr>`).join('')}</tbody>
+        </table>
+      </div>`:'<div class="modal-tip" style="margin-top:14px">✓ 该公司暂无低报工人员。</div>'}
+  `;
+  openDrillModal(companyName+' · 工时详情',body);
+}
+
+function drillLowReport(name,dept,closeRate,validRate){
+  const body=`
+    <div class="drill-stat-grid">
+      <div class="drill-stat"><div class="l">员工姓名</div><div class="v" style="font-size:18px">${name}</div></div>
+      <div class="drill-stat"><div class="l">所在部门</div><div class="v" style="font-size:16px">${dept}</div></div>
+      <div class="drill-stat"><div class="l">工时闭环率</div><div class="v ${closeRate<60?'delta-down':''}">${closeRate}<span class="u">%</span></div></div>
+      <div class="drill-stat"><div class="l">有效闭环率</div><div class="v ${validRate<60?'delta-down':''}">${validRate}<span class="u">%</span></div></div>
+    </div>
+    <div class="modal-tip">⚠ ${name}（${dept}）工时闭环率 ${closeRate}%，${closeRate===0?'<b>零闭环</b>，需立即约谈整改':(closeRate<60?'<b>低闭环</b>，需下达整改要求':'有待进一步提升')}。建议规范工时填报，引导工时向核心业务归集。</div>
+  `;
+  openDrillModal(name+' · 工时详情',body);
+}
+
+/* ============================================================
+   渲染：企业文化
+   ============================================================ */
+function renderCulture(){
+  const c=DASHBOARD_DATA.culture;
+  const sorted=[...c.scores].sort((a,b)=>b.score-a.score).slice(0,10);
+  chartInstances.culture=echarts.init(document.getElementById('chart-culture'));
+  chartInstances.culture.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+      formatter:p=>{const person=sorted[p[0].dataIndex];return person.name+' ('+person.company+')<br/>积分: '+person.score+'分'+(person.reason?'<br/>原因: '+person.reason:'');}},
+    grid:{left:'3%',right:'8%',bottom:'3%',containLabel:true},
+    xAxis:{type:'value',name:'积分',...AXIS_STYLE},
+    yAxis:{type:'category',data:sorted.map(s=>s.name).reverse(),axisLabel:{fontSize:11,...AXIS_STYLE.axisLabel},...AXIS_STYLE},
+    series:[{type:'bar',data:sorted.map(s=>s.value=s.score).reverse(),
+      itemStyle:{borderRadius:[0,4,4,0],
+        color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#fb923c'},{offset:0.5,color:'#f59e0b'},{offset:1,color:'#ec4899'}])},
+      label:{show:true,position:'right',formatter:'{c}分',fontSize:11,color:'#0066cc'},barWidth:'55%'}]
+  });
+
+  const companyMap={};
+  c.scores.forEach(s=>{companyMap[s.company]=(companyMap[s.company]||0)+s.score;});
+  const companyData=Object.entries(companyMap).map(([company,score])=>({company,score})).sort((a,b)=>b.score-a.score);
+  chartInstances.cultureCompany=echarts.init(document.getElementById('chart-cultureCompany'));
+  chartInstances.cultureCompany.setOption({
+    tooltip:{trigger:'item',formatter:'{b}: {c}分 ({d}%)'},
+    legend:{type:'scroll',bottom:0,fontSize:11,textStyle:{color:'#475569'}},
+    series:[{type:'pie',radius:['35%','65%'],center:['50%','45%'],
+      label:{formatter:'{b}\n{c}分',fontSize:11},
+      data:companyData.map((c,i)=>({name:c.company,value:c.score,itemStyle:{color:COLORS.palette[i]}}))}]
+  });
+  chartInstances.cultureCompany.on('click',p=>drillCulture(p.name));
+}
+
+function drillCulture(companyName){
+  const list=DASHBOARD_DATA.culture.scores.filter(s=>s.company===companyName);
+  const total=list.reduce((s,x)=>s+x.score,0);
+  const body=`
+    <div class="drill-stat-grid">
+      <div class="drill-stat"><div class="l">公司</div><div class="v" style="font-size:16px">${companyName}</div></div>
+      <div class="drill-stat"><div class="l">总积分</div><div class="v">${total}<span class="u">分</span></div></div>
+      <div class="drill-stat"><div class="l">获奖人数</div><div class="v">${list.length}<span class="u">人</span></div></div>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>姓名</th><th>积分</th><th>积分原因</th></tr></thead>
+        <tbody>${list.map(s=>`<tr><td><b>${s.name}</b></td><td>${s.score}分</td><td>${s.reason||'—'}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+  `;
+  openDrillModal(companyName+' · 文化积分详情',body);
+}
+
+/* ============================================================
+   渲染：问题与建议
+   ============================================================ */
+function renderSuggest(){
+  const s=DASHBOARD_DATA.suggest;
+  document.getElementById('suggestBody').innerHTML=s.map((item,i)=>`
+    <div style="margin-bottom:${i===s.length-1?'0':'22px'}">
+      <h3 style="font-size:15px;color:#0066cc;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+        <span style="background:linear-gradient(135deg,#f59e0b,#fb923c);color:#fff;width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px">${i+1}</span>
+        ${item.topic}
+      </h3>
+      <div class="suggest-grid">
+        <div class="suggest-card problem"><h4>⚠ 存在问题</h4><ol>${item.problems.map(p=>`<li>${p}</li>`).join('')}</ol></div>
+        <div class="suggest-card solution"><h4>✓ 改进建议</h4><ol>${item.solutions.map(p=>`<li>${p}</li>`).join('')}</ol></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   弹窗管理（编辑 + 下钻共用）
+   ============================================================ */
+function openDrillModal(title,body){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalSub').textContent='数据下钻 · 详情视图';
+  document.getElementById('modalBody').innerHTML=body;
+  document.getElementById('modalFooter').innerHTML='<button class="btn btn-ghost btn-sm" onclick="closeModal()">关闭</button>';
+  document.getElementById('modalMask').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('modalMask').classList.remove('show');
+}
+
+/* ============================================================
+   本地持久化（localStorage）
+   ============================================================ */
+const STORAGE_KEY='quarterly_dashboard_data_q3_v1';
+const DEFAULT_DATA=JSON.parse(JSON.stringify(DASHBOARD_DATA));
+
+function saveDataToStorage(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(DASHBOARD_DATA));
+    return true;
+  }catch(e){
+    console.warn('保存到本地失败',e);
+    showToast('本地保存失败：'+e.message,'error');
+    return false;
+  }
+}
+
+function loadDataFromStorage(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw)return false;
+    const saved=JSON.parse(raw);
+    if(saved.meta)DASHBOARD_DATA.meta=saved.meta;
+    if(saved.overviewSummary!==undefined)DASHBOARD_DATA.overviewSummary=saved.overviewSummary;
+    if(saved.kpiCards)DASHBOARD_DATA.kpiCards=saved.kpiCards;
+    if(saved.personnel)DASHBOARD_DATA.personnel=saved.personnel;
+    if(saved.financial)DASHBOARD_DATA.financial=saved.financial;
+    if(saved.capacity)DASHBOARD_DATA.capacity=saved.capacity;
+    if(saved.performance)DASHBOARD_DATA.performance=saved.performance;
+    if(saved.workhours)DASHBOARD_DATA.workhours=saved.workhours;
+    if(saved.culture)DASHBOARD_DATA.culture=saved.culture;
+    if(saved.suggest)DASHBOARD_DATA.suggest=saved.suggest;
+    /* 防御性初始化：兼容旧版保存的数据（缺失新加字段） */
+    ensureDataIntegrity();
+    /* 去重后立即写回 localStorage，避免下次加载仍存在重复 */
+    saveDataToStorage();
+    return true;
+  }catch(e){
+    console.warn('从本地加载失败',e);
+    return false;
+  }
+}
+
+/* 确保数据结构完整：所有数组/对象字段都有默认值 */
+function ensureDataIntegrity(){
+  if(!DASHBOARD_DATA.meta)DASHBOARD_DATA.meta={};
+  if(!DASHBOARD_DATA.personnel)DASHBOARD_DATA.personnel={};
+  if(!DASHBOARD_DATA.personnel.overview)DASHBOARD_DATA.personnel.overview={initial:137,newAdd:4,resigned:18,transferOut:8,transferIn:9,end:124,avg:124};
+  if(!DASHBOARD_DATA.personnel.companyHeadcount)DASHBOARD_DATA.personnel.companyHeadcount=[];
+  if(!DASHBOARD_DATA.personnel.resignByCompany)DASHBOARD_DATA.personnel.resignByCompany=[];
+  if(!DASHBOARD_DATA.personnel.resignDetail)DASHBOARD_DATA.personnel.resignDetail=[];
+  if(!DASHBOARD_DATA.personnel.ageDistribution)DASHBOARD_DATA.personnel.ageDistribution=[];
+  if(!DASHBOARD_DATA.personnel.tenureDistribution)DASHBOARD_DATA.personnel.tenureDistribution=[];
+  if(!DASHBOARD_DATA.personnel.avgAgeByCompany)DASHBOARD_DATA.personnel.avgAgeByCompany=[];
+  if(!DASHBOARD_DATA.personnel.transferIn)DASHBOARD_DATA.personnel.transferIn=[];
+  if(!DASHBOARD_DATA.personnel.transferOut)DASHBOARD_DATA.personnel.transferOut=[];
+  /* 去重：修复历史数据中可能存在的重复记录 */
+  DASHBOARD_DATA.personnel.resignDetail=dedupByKey(DASHBOARD_DATA.personnel.resignDetail, r=>r.name+'|'+r.company);
+  DASHBOARD_DATA.personnel.transferIn=dedupByKey(DASHBOARD_DATA.personnel.transferIn, r=>r.name+'|'+r.from+'|'+r.to);
+  DASHBOARD_DATA.personnel.transferOut=dedupByKey(DASHBOARD_DATA.personnel.transferOut, r=>r.name+'|'+r.from+'|'+r.to);
+  DASHBOARD_DATA.personnel.lowReport=DASHBOARD_DATA.personnel.lowReport||[];
+  if(!DASHBOARD_DATA.financial)DASHBOARD_DATA.financial={};
+  if(!DASHBOARD_DATA.financial.efficiency)DASHBOARD_DATA.financial.efficiency={};
+  if(!DASHBOARD_DATA.financial.efficiency.targets)DASHBOARD_DATA.financial.efficiency.targets=[];
+  if(!DASHBOARD_DATA.financial.efficiency.companies)DASHBOARD_DATA.financial.efficiency.companies=[];
+  if(!DASHBOARD_DATA.financial.laborCost)DASHBOARD_DATA.financial.laborCost=[];
+  if(!DASHBOARD_DATA.capacity)DASHBOARD_DATA.capacity={};
+  if(!DASHBOARD_DATA.capacity.companies)DASHBOARD_DATA.capacity.companies=[];
+  if(!DASHBOARD_DATA.performance)DASHBOARD_DATA.performance={};
+  if(!DASHBOARD_DATA.performance.groups)DASHBOARD_DATA.performance.groups=[];
+  if(!DASHBOARD_DATA.workhours)DASHBOARD_DATA.workhours={};
+  if(!DASHBOARD_DATA.workhours.companies)DASHBOARD_DATA.workhours.companies=[];
+  if(!DASHBOARD_DATA.workhours.lowReport)DASHBOARD_DATA.workhours.lowReport=[];
+  if(!DASHBOARD_DATA.culture)DASHBOARD_DATA.culture={};
+  if(!DASHBOARD_DATA.culture.scores)DASHBOARD_DATA.culture.scores=[];
+  if(!DASHBOARD_DATA.suggest)DASHBOARD_DATA.suggest=[];
+  if(!DASHBOARD_DATA.kpiCards)DASHBOARD_DATA.kpiCards=[];
+
+/* 通用去重函数：按 keyFn 提取的字符串去重，保留最后一次出现的记录 */
+function dedupByKey(arr,keyFn){
+  if(!Array.isArray(arr))return[];
+  const seen=new Map();
+  for(const item of arr){
+    if(item===null||item===undefined)continue;
+    const k=keyFn(item);
+    seen.set(k,item);
+  }
+  return Array.from(seen.values());
+}
+}
+
+function clearDataFromStorage(){
+  try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+}
+
+function resetAllData(){
+  if(!confirm('确定要恢复全部数据为初始默认值吗？\n\n此操作会清除本地保存的所有修改（包括抬头编辑和所有数据），不可撤销。建议先导出备份。'))return;
+  clearDataFromStorage();
+  Object.keys(DEFAULT_DATA).forEach(k=>{
+    if(k==='meta'){
+      DASHBOARD_DATA.meta=JSON.parse(JSON.stringify(DEFAULT_DATA.meta));
+    }else{
+      DASHBOARD_DATA[k]=JSON.parse(JSON.stringify(DEFAULT_DATA[k]));
+    }
+  });
+  renderHeader();
+  renderAll();
+  showToast('已恢复初始默认数据','success');
+}
+
+/* ============================================================
+   抬头（Header）渲染与编辑
+   ============================================================ */
+function renderHeader(){
+  const meta=DASHBOARD_DATA.meta||{};
+  const titleEl=document.getElementById('headerTitle');
+  const subEl=document.getElementById('headerSub');
+  const sloganEl=document.getElementById('headerSlogan');
+  if(titleEl)titleEl.textContent=meta.title||'运营季报';
+  /* 同步更新浏览器标签页标题，与报表标题保持一致 */
+  if(meta.title)document.title=meta.title+' · 可视化看板';
+  if(subEl){
+    const author=meta.author||'';
+    const date=meta.date||'';
+    subEl.innerHTML=`编写人：${author} &nbsp;|&nbsp; 日期：${date} &nbsp;|&nbsp; <span id="headerSlogan">${meta.slogan||'客户至上 · 拼搏奉献 · 开拓创新 · 合作共赢'}</span>`;
+  }
+}
+
+function openMetaEditor(){
+  const meta=DASHBOARD_DATA.meta||{};
+  document.getElementById('modalTitle').textContent='编辑 - 报告抬头';
+  document.getElementById('modalSub').textContent='修改报告标题、编写人、日期及核心理念（保存后刷新页面仍保留修改）';
+  document.getElementById('modalBody').innerHTML=`
+    <div class="modal-tip">💡 修改完成后点击「保存并刷新」即可生效。所修改的内容会保存到浏览器本地，刷新或重新打开页面后不会丢失。</div>
+    <table class="edit-table" style="table-layout:fixed">
+      <colgroup><col style="width:120px"><col></colgroup>
+      <tbody>
+        <tr><th>报告标题</th><td><input type="text" id="meta-title" value="${(meta.title||'').replace(/"/g,'&quot;')}" style="width:100%"></td></tr>
+        <tr><th>编写人</th><td><input type="text" id="meta-author" value="${(meta.author||'').replace(/"/g,'&quot;')}" style="width:100%"></td></tr>
+        <tr><th>日期</th><td><input type="text" id="meta-date" value="${(meta.date||'').replace(/"/g,'&quot;')}" style="width:100%" placeholder="如：2026年10月"></td></tr>
+        <tr><th>核心理念</th><td><input type="text" id="meta-slogan" value="${(meta.slogan||'客户至上 · 拼搏奉献 · 开拓创新 · 合作共赢').replace(/"/g,'&quot;')}" style="width:100%" placeholder="如：客户至上 · 拼搏奉献 · 开拓创新 · 合作共赢"></td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;color:#9a3412">
+      ⚠ 当前显示在顶部蓝色导航条上的信息都可以在这里修改。<b>侧边栏</b>的"运营季报 / 2026 · 三季度"是导航标识，不在此处修改。
+    </div>
+  `;
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">取消</button>
+    <button class="btn btn-primary btn-sm" onclick="saveMetaEditor()">保存并刷新</button>
+  `;
+  document.getElementById('modalMask').classList.add('show');
+}
+
+function saveMetaEditor(){
+  if(!DASHBOARD_DATA.meta)DASHBOARD_DATA.meta={};
+  DASHBOARD_DATA.meta.title=(document.getElementById('meta-title').value||'').trim()||'运营季报';
+  DASHBOARD_DATA.meta.author=(document.getElementById('meta-author').value||'').trim();
+  DASHBOARD_DATA.meta.date=(document.getElementById('meta-date').value||'').trim();
+  DASHBOARD_DATA.meta.slogan=(document.getElementById('meta-slogan').value||'').trim()||'客户至上 · 拼搏奉献 · 开拓创新 · 合作共赢';
+  saveDataToStorage();
+  closeModal();
+  renderHeader();
+  showToast('抬头已保存并刷新','success');
+}
+
+/* ============================================================
+   编辑器
+   ============================================================ */
+let currentEditSection=null;
+let currentEditRows=[];
+
+const EDITOR_CONFIG={
+  overview:{
+    title:'编辑 - 核心指标总览',
+    sub:'修改净合同额/管理净营收/管理利润等关键数值，以及 6 张指标卡上显示的所有文本（可改完成比、同比、含25年终奖、目标值、底部说明等）',
+    hasSummary:true,
+    tables:[
+      {name:'净合同额关键指标',fields:['yearTarget','quarterDone','rate','yoy'],headers:['年度目标','完成值','完成比%','同比%'],data:()=>[{yearTarget:DASHBOARD_DATA.financial.netContract.yearTarget,quarterDone:DASHBOARD_DATA.financial.netContract.quarterDone,rate:DASHBOARD_DATA.financial.netContract.rate,yoy:DASHBOARD_DATA.financial.netContract.yoy}],save:(rows)=>{const r=rows[0];DASHBOARD_DATA.financial.netContract.yearTarget=r.yearTarget;DASHBOARD_DATA.financial.netContract.quarterDone=r.quarterDone;DASHBOARD_DATA.financial.netContract.rate=r.rate;DASHBOARD_DATA.financial.netContract.yoy=r.yoy;}},
+      {name:'管理净营收关键指标',fields:['yearTarget','quarterDone','rate','yoy'],headers:['年度目标','完成值','完成比%','同比%'],data:()=>[{yearTarget:DASHBOARD_DATA.financial.revenue.yearTarget,quarterDone:DASHBOARD_DATA.financial.revenue.quarterDone,rate:DASHBOARD_DATA.financial.rate,yoy:DASHBOARD_DATA.financial.revenue.yoy}],save:(rows)=>{const r=rows[0];DASHBOARD_DATA.financial.revenue.yearTarget=r.yearTarget;DASHBOARD_DATA.financial.revenue.quarterDone=r.quarterDone;DASHBOARD_DATA.financial.revenue.rate=r.rate;DASHBOARD_DATA.financial.revenue.yoy=r.yoy;}},
+      {name:'管理利润关键指标',fields:['yearTarget','quarterDone','rate','yoy'],headers:['年度目标','完成值','完成比%','同比%'],data:()=>[{yearTarget:DASHBOARD_DATA.financial.profit.yearTarget,quarterDone:DASHBOARD_DATA.financial.profit.quarterDone,rate:DASHBOARD_DATA.financial.profit.rate,yoy:DASHBOARD_DATA.financial.profit.yoy}],save:(rows)=>{const r=rows[0];DASHBOARD_DATA.financial.profit.yearTarget=r.yearTarget;DASHBOARD_DATA.financial.profit.quarterDone=r.quarterDone;DASHBOARD_DATA.financial.profit.rate=r.rate;DASHBOARD_DATA.financial.profit.yoy=r.yoy;}},
+      {name:'元效关键指标',fields:['name','target','done'],headers:['指标名','目标值','完成值'],data:()=>DASHBOARD_DATA.financial.efficiency.targets,save:(rows)=>{DASHBOARD_DATA.financial.efficiency.targets=rows;}},
+      {name:'人工成本合计',fields:['laborCost'],headers:['人工成本合计(万元)'],data:()=>[{laborCost:DASHBOARD_DATA.financial.efficiency.laborCost}],save:(rows)=>{DASHBOARD_DATA.financial.efficiency.laborCost=rows[0].laborCost;}},
+      {name:'KPI 指标卡显示文本（6 个卡片完整自定义）',fields:['label','rate','yoy','yoyType','sub'],headers:['指标名','完成比/人均','同比/副文本','箭头(up=绿▲/down=红▼)','底部说明'],
+        data:()=>{
+          /* 实时从 DASHBOARD_DATA.financial 计算，与前端/导出保持一致 */
+          const f=DASHBOARD_DATA.financial;
+          const totalAvgHeadcount=DASHBOARD_DATA.personnel&&DASHBOARD_DATA.personnel.overview&&DASHBOARD_DATA.personnel.overview.avg||0;
+          const avgPerCapita=totalAvgHeadcount>0?(f.efficiency.laborCost/totalAvgHeadcount).toFixed(2):'—';
+          const revRate=f.efficiency.targets[0]&&f.efficiency.targets[0].target?(f.efficiency.targets[0].done/f.efficiency.targets[0].target*100).toFixed(1):0;
+          const profitRate=f.efficiency.targets[1]&&f.efficiency.targets[1].target?(f.efficiency.targets[1].done/f.efficiency.targets[1].target*100).toFixed(1):0;
+          const yoyFmt=(v)=>(v>=0?'+':'')+v+'%';
+          const rateFmt=(v)=>v+'%';
+          const userLabels=(DASHBOARD_DATA.kpiCards||[]).map(c=>c&&c.label?c.label:null);
+          const computed=[
+            {label:userLabels[0]||'净合同额',rate:rateFmt(f.netContract.rate),yoy:yoyFmt(f.netContract.yoy),yoyType:f.netContract.yoy>=0?'up':'down',sub:'年度目标 '+f.netContract.yearTarget+'万'},
+            {label:userLabels[1]||'管理净营收',rate:rateFmt(f.revenue.rate),yoy:yoyFmt(f.revenue.yoy),yoyType:f.revenue.yoy>=0?'up':'down',sub:'年度目标 '+f.revenue.yearTarget+'万'},
+            {label:userLabels[2]||'管理利润',rate:rateFmt(f.profit.rate),yoy:yoyFmt(f.profit.yoy),yoyType:f.profit.yoy>=0?'up':'down',sub:'年度目标 '+f.profit.yearTarget+'万'},
+            {label:userLabels[3]||'人工成本',rate:'人均 '+avgPerCapita+'万',yoy:'含25年终奖',yoyType:'up',sub:'月度+年终综合'},
+            {label:userLabels[4]||'元均管理净营收',rate:rateFmt(revRate),yoy:'目标 '+(f.efficiency.targets[0]&&f.efficiency.targets[0].target||''),yoyType:parseFloat(revRate)>=100?'up':'down',sub:'管理净营收÷人工成本'},
+            {label:userLabels[5]||'元均管理利润',rate:rateFmt(profitRate),yoy:'目标 '+(f.efficiency.targets[1]&&f.efficiency.targets[1].target||''),yoyType:parseFloat(profitRate)>=100?'up':'down',sub:'管理利润÷人工成本'}
+          ];
+          return computed;
+        },
+        save:(rows)=>{
+          /* 用户只能修改 label，其他字段（rate/yoy/yoyType/sub）始终跟随实际数据 */
+          DASHBOARD_DATA.kpiCards=rows.map((r,i)=>({label:r.label||'',rate:DASHBOARD_DATA.financial.netContract.rate+'%',yoy:'',yoyType:r.yoyType||'up',sub:''}));
+        }}
+    ]
+  },
+  personnel:{
+    title:'编辑 - 人员情况',
+    sub:'修改各公司人数、离职分布、年龄/司龄分布',
+    tables:[
+      {name:'各公司人数',fields:['company','end','avg'],headers:['公司','期末人数','平均人数'],data:()=>DASHBOARD_DATA.personnel.companyHeadcount,save:(rows)=>{DASHBOARD_DATA.personnel.companyHeadcount=rows;}},
+      {name:'人员总数概况',fields:['initial','newAdd','resigned','transferOut','transferIn','end','avg'],headers:['期初','新增','离职','调出','调入','期末','平均'],data:()=>[DASHBOARD_DATA.personnel.overview],save:(rows)=>{DASHBOARD_DATA.personnel.overview=rows[0];}},
+      {name:'离职人员公司分布',fields:['company','count'],headers:['公司','离职人数'],data:()=>DASHBOARD_DATA.personnel.resignByCompany,save:(rows)=>{DASHBOARD_DATA.personnel.resignByCompany=rows;}},
+      {name:'离职人员明细（九宫格落位 + 人员定位）',fields:['name','company','grid','talent'],headers:['离职人员','对应公司','九宫格落位','人员定位'],data:()=>(DASHBOARD_DATA.personnel.resignDetail||[]).map(r=>({...r})),save:(rows)=>{DASHBOARD_DATA.personnel.resignDetail=rows.map(r=>({name:r.name||'',company:r.company||'',grid:r.grid||'',talent:r.talent||''}));}},
+      {name:'各公司平均年龄',fields:['company','age'],headers:['公司','平均年龄'],data:()=>DASHBOARD_DATA.personnel.avgAgeByCompany,save:(rows)=>{DASHBOARD_DATA.personnel.avgAgeByCompany=rows;}},
+      {name:'调入人员明细',fields:['name','type','from','to'],headers:['姓名','异动类型','调出部门/公司','调入部门/公司'],data:()=>(DASHBOARD_DATA.personnel.transferIn||[]).map(r=>({...r})),save:(rows)=>{DASHBOARD_DATA.personnel.transferIn=rows.map(r=>({name:r.name||'',type:r.type||'调入',from:r.from||'',to:r.to||''}));}},
+      {name:'调出人员明细',fields:['name','type','from','to'],headers:['姓名','异动类型','调出部门/公司','调入部门/公司'],data:()=>(DASHBOARD_DATA.personnel.transferOut||[]).map(r=>({...r})),save:(rows)=>{DASHBOARD_DATA.personnel.transferOut=rows.map(r=>({name:r.name||'',type:r.type||'调出',from:r.from||'',to:r.to||''}));}}
+    ]
+  },
+  financial:{
+    title:'编辑 - 关键经济指标',
+    sub:'修改净合同额/管理净营收/管理利润/人工成本明细',
+    tables:[
+      {name:'净合同额',fields:['company','target','done','lastYear'],headers:['公司','目标值','完成值','去年同期'],data:()=>DASHBOARD_DATA.financial.netContract.companies,save:(rows)=>{DASHBOARD_DATA.financial.netContract.companies=rows;}},
+      {name:'管理净营收',fields:['company','target','done','lastYear'],headers:['公司','目标值','完成值','去年同期'],data:()=>DASHBOARD_DATA.financial.revenue.companies,save:(rows)=>{DASHBOARD_DATA.financial.revenue.companies=rows;}},
+      {name:'管理利润',fields:['company','target','done','lastYear'],headers:['公司','目标值','完成值','去年同期'],data:()=>DASHBOARD_DATA.financial.profit.companies,save:(rows)=>{DASHBOARD_DATA.financial.profit.companies=rows;}},
+      {name:'元效（各公司）',fields:['company','revenue','profit','cost','revenuePer','profitPer','revenueTarget','profitTarget','revenueRate','profitRate'],headers:['公司','净营收','利润','人工成本','元均净营收','元均利润','元均净营收目标值','元均净利润目标值','元均净营收完成比','元均净利润完成比'],data:()=>{
+        const overallRevTarget=(DASHBOARD_DATA.financial.efficiency.targets[0]&&DASHBOARD_DATA.financial.efficiency.targets[0].target)||0;
+        const overallProfitTarget=(DASHBOARD_DATA.financial.efficiency.targets[1]&&DASHBOARD_DATA.financial.efficiency.targets[1].target)||0;
+        return DASHBOARD_DATA.financial.efficiency.companies.map(c=>({
+          ...c,
+          revenueTarget:c.revenueTarget||overallRevTarget,
+          profitTarget:c.profitTarget||overallProfitTarget,
+          revenueRate:(c.revenueTarget||overallRevTarget)?(c.revenuePer/(c.revenueTarget||overallRevTarget)*100).toFixed(1)+'%':'—',
+          profitRate:(c.profitTarget||overallProfitTarget)?(c.profitPer/(c.profitTarget||overallProfitTarget)*100).toFixed(1)+'%':'—'
+        }));
+      },save:(rows)=>{DASHBOARD_DATA.financial.efficiency.companies=rows.map(r=>({company:r.company||'',revenue:r.revenue||0,profit:r.profit||0,cost:r.cost||0,revenuePer:r.revenuePer||0,profitPer:r.profitPer||0,revenueTarget:r.revenueTarget||0,profitTarget:r.profitTarget||0}));}},
+      {name:'人工成本',fields:['company','avgCount','monthly','yearBonus','total','perCapita'],headers:['公司','平均人数','月度成本','年终奖','合计','人均成本'],data:()=>DASHBOARD_DATA.financial.laborCost,save:(rows)=>{DASHBOARD_DATA.financial.laborCost=rows;}}
+    ]
+  },
+  capacity:{
+    title:'编辑 - 产能情况',
+    sub:'修改各公司实际产能、标准产能、转化率',
+    tables:[
+      {name:'各公司产能',fields:['company','actual','standard','rate'],headers:['公司','实际产能','标准产能','转化率(%)'],data:()=>DASHBOARD_DATA.capacity.companies,save:(rows)=>{DASHBOARD_DATA.capacity.companies=rows;}}
+    ]
+  },
+  performance:{
+    title:'编辑 - 生产人员绩效（按公司分组）',
+    sub:'修改各公司生产人员产值与奖金变化',
+    tables:DASHBOARD_DATA.performance.groups.map((g,i)=>({
+      name:g.company+' ('+(g.totalDeduct<0?'激励'+Math.abs(g.totalDeduct):'扣减'+g.totalDeduct)+'元)',
+      fields:['name','value','bonus'],
+      headers:['姓名','产值','奖金变化比'],
+      data:()=>DASHBOARD_DATA.performance.groups[i].people,
+      save:(rows)=>{DASHBOARD_DATA.performance.groups[i].people=rows;},
+      groupIndex:i
+    }))
+  },
+  workhours:{
+    title:'编辑 - 工时闭环率',
+    sub:'修改各公司工时数据、低报工人员名单',
+    tables:[
+      {name:'各公司工时',fields:['company','count','should','reported','project','closeRate','validRate'],headers:['公司','人数','应出勤','报工','项目工时','闭环率%','有效闭环率%'],data:()=>DASHBOARD_DATA.workhours.companies,save:(rows)=>{DASHBOARD_DATA.workhours.companies=rows;}},
+      {name:'低报工人员',fields:['name','dept','closeRate','validRate'],headers:['姓名','部门','闭环率%','有效闭环率%'],data:()=>DASHBOARD_DATA.workhours.lowReport,save:(rows)=>{DASHBOARD_DATA.workhours.lowReport=rows;}}
+    ]
+  },
+  culture:{
+    title:'编辑 - 企业文化积分',
+    sub:'修改积分明细',
+    tables:[
+      {name:'积分明细',fields:['name','company','score','reason'],headers:['姓名','公司','积分','原因'],data:()=>DASHBOARD_DATA.culture.scores,save:(rows)=>{DASHBOARD_DATA.culture.scores=rows;}}
+    ]
+  },
+  suggest:{
+    title:'编辑 - 问题与改进建议',
+    sub:'修改各维度问题与建议内容',
+    get tables(){
+      return DASHBOARD_DATA.suggest.map((s,i)=>({
+        name:s.topic,
+        fields:['text'],
+        headers:['内容'],
+        data:()=>{
+          /* 实时从 DASHBOARD_DATA.suggest 读取，避免与 localStorage 旧数据不同步 */
+          const cur=DASHBOARD_DATA.suggest[i]||s;
+          return cur.problems.concat(['---改进建议---']).concat(cur.solutions).map(t=>({text:t}));
+        },
+        save:(rows)=>{const all=rows.map(r=>r.text);const div=all.indexOf('---改进建议---');if(div>-1){DASHBOARD_DATA.suggest[i].problems=all.slice(0,div).filter(Boolean);DASHBOARD_DATA.suggest[i].solutions=all.slice(div+1).filter(Boolean);}},
+        suggestIndex:i
+      }));
+    }
+  }
+};
+
+function openEditor(section){
+  currentEditSection=section;
+  /* performance 的表格随当前 groups 动态重建（兼容 localStorage 旧数据/新增公司） */
+  if(section==='performance'){
+    EDITOR_CONFIG.performance.tables=DASHBOARD_DATA.performance.groups.map((g,i)=>({
+      name:g.company+' ('+(g.totalDeduct<0?'激励'+Math.abs(g.totalDeduct):'扣减'+g.totalDeduct)+'元)',
+      fields:['name','value','bonus'],
+      headers:['姓名','产值','奖金变化比'],
+      data:()=>DASHBOARD_DATA.performance.groups[i].people,
+      save:(rows)=>{DASHBOARD_DATA.performance.groups[i].people=rows;},
+      groupIndex:i
+    }));
+  }
+  const cfg=EDITOR_CONFIG[section];
+  if(!cfg){
+    showToast('编辑模块尚未配置：'+section,'error');
+    return;
+  }
+  document.getElementById('modalTitle').textContent=cfg.title||('编辑 - '+section);
+  document.getElementById('modalSub').textContent=cfg.sub||'';
+  currentEditRows=[];
+  const body=document.getElementById('modalBody');
+  let summaryHtml='';
+  if(cfg.hasSummary){
+    summaryHtml=`<div style="margin-bottom:18px">
+      <h4 style="font-size:13px;color:#0066cc;margin-bottom:8px;font-weight:700">整体小结（纯文本格式）</h4>
+      <textarea id="overviewSummaryEditor" style="width:100%;min-height:140px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;line-height:1.7;resize:vertical" placeholder="直接输入文字即可。例如：三季度净合同额完成947万（同比下降52%）；...">${(DASHBOARD_DATA.overviewSummary||'').replace(/<[^>]+>/g,'')}</textarea>
+      <div style="font-size:11px;color:var(--text-light);margin-top:4px">💡 纯文本格式，无需写任何 HTML。系统会自动识别"下降/下滑/亏损"等词标红、"增长/提升/盈利"等词标绿。</div>
+    </div>`;
+  }
+  body.innerHTML='<div class="modal-tip">💡 直接修改表格中的数据，点击"保存并刷新"即可更新看板。每个表格下方都有自己的"+新增行"按钮，可添加数据；点击行末"×"可删除该行。</div>'+
+    summaryHtml+
+    cfg.tables.map((tbl,ti)=>{
+      let rows=[];
+      try{
+        rows=tbl.data()||[];
+      }catch(err){
+        console.error('加载表格数据出错：',tbl.name,err);
+        showToast('加载表格【'+tbl.name+'】失败：'+err.message,'error');
+        rows=[];
+      }
+      currentEditRows.push({fields:tbl.fields,rows:JSON.parse(JSON.stringify(rows)),save:tbl.save});
+      /* performance 模块：在每个公司表头加"删除公司"按钮 */
+      const companyActions=(section==='performance')
+        ?` <button class="btn btn-ghost btn-sm" style="margin-left:8px;padding:2px 8px;font-size:11px;color:#ef4444;border-color:#fecaca" onclick="delPerformanceGroup(${tbl.groupIndex})" title="删除该公司及所有人员数据">× 删除公司</button> <button class="btn btn-ghost btn-sm" style="margin-left:4px;padding:2px 8px;font-size:11px" onclick="renamePerformanceGroup(${tbl.groupIndex})" title="重命名公司或修改扣减总额">✎ 编辑名称</button>`
+        :'';
+      return `<div style="margin-bottom:20px">
+        <h4 style="font-size:13px;color:#0066cc;margin-bottom:8px;font-weight:700">${tbl.name}${companyActions}</h4>
+        <div style="overflow-x:auto">
+          <table class="edit-table" data-table="${ti}">
+            <thead><tr>${tbl.headers.map(h=>`<th>${h}</th>`).join('')}<th style="width:40px">删</th></tr></thead>
+            <tbody>
+              ${rows.map((r,ri)=>`<tr data-row="${ri}">
+                ${tbl.fields.map(f=>`<td><input type="text" value="${(r[f]??'').toString().replace(/"/g,'&quot;')}" data-field="${f}"></td>`).join('')}
+                <td class="edit-row-del" onclick="delEditorRow(${ti},${ri})">×</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addEditorRow(${ti})">+ 新增行</button>
+      </div>`;
+    }).join('')+
+    /* performance 模块：在所有公司表后追加"+ 新增公司"按钮 */
+    (section==='performance'?'<div style="margin-top:24px;padding-top:16px;border-top:2px dashed var(--border);text-align:center"><button class="btn btn-primary btn-sm" onclick="addPerformanceGroup()">+ 新增公司</button><div style="font-size:11px;color:var(--text-light);margin-top:6px">💡 新增公司会出现在看板上"宿迁公司"等已有公司之后的位置。</div></div>':'');
+  document.getElementById('modalFooter').innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">取消</button>
+    <button class="btn btn-primary btn-sm" onclick="saveEditor()">保存并刷新</button>
+  `;
+  document.getElementById('modalMask').classList.add('show');
+}
+
+/* ============================================================
+   Performance 模块专用：新增/删除/重命名公司
+   ============================================================ */
+function addPerformanceGroup(){
+  const name=(prompt('请输入新公司名称：','新公司')||'').trim();
+  if(!name){showToast('公司名称不能为空','error');return;}
+  const totalStr=prompt('请输入该公司扣减总额（元）：','0')||'0';
+  const totalDeduct=Number(totalStr)||0;
+  DASHBOARD_DATA.performance.groups.push({company:name,totalDeduct:totalDeduct,people:[{name:'待录入',value:0,bonus:0}]});
+  saveDataToStorage();
+  showToast('已新增公司：'+name+'，请刷新弹窗查看','success');
+  openEditor('performance');
+}
+
+function delPerformanceGroup(idx){
+  const grp=DASHBOARD_DATA.performance.groups[idx];
+  if(!grp)return;
+  if(!confirm('确定要删除「'+grp.company+'」及其全部人员数据吗？\n此操作不可撤销，建议先导出备份。'))return;
+  DASHBOARD_DATA.performance.groups.splice(idx,1);
+  saveDataToStorage();
+  showToast('已删除：'+grp.company,'success');
+  openEditor('performance');
+}
+
+function renamePerformanceGroup(idx){
+  const grp=DASHBOARD_DATA.performance.groups[idx];
+  if(!grp)return;
+  const newName=(prompt('修改公司名称：',grp.company)||'').trim();
+  if(!newName){showToast('公司名称不能为空','error');return;}
+  const totalStr=prompt('修改扣减总额（元，若为激励请输入负数，如 -2313）：',String(grp.totalDeduct||0))||String(grp.totalDeduct||0);
+  grp.company=newName;
+  grp.totalDeduct=Number(totalStr)||0;
+  saveDataToStorage();
+  showToast('已更新：'+newName,'success');
+  openEditor('performance');
+}
+
+function delEditorRow(tableIndex,rowIndex){
+  currentEditRows[tableIndex].rows.splice(rowIndex,1);
+  refreshEditorTable(tableIndex);
+}
+
+function addEditorRow(tableIndex){
+  if(!currentEditSection)return;
+  if(typeof tableIndex!=='number')tableIndex=0;
+  const tbl=currentEditRows[tableIndex];
+  if(!tbl)return;
+  const newRow={};
+  tbl.fields.forEach(f=>newRow[f]='');
+  tbl.rows.push(newRow);
+  refreshEditorTable(tableIndex);
+}
+
+function refreshEditorTable(tableIndex){
+  const tbl=currentEditRows[tableIndex];
+  const table=document.querySelector(`table.edit-table[data-table="${tableIndex}"]`);
+  table.querySelector('tbody').innerHTML=tbl.rows.map((r,ri)=>`<tr data-row="${ri}">
+    ${tbl.fields.map(f=>`<td><input type="text" value="${r[f]??''}" data-field="${f}"></td>`).join('')}
+    <td class="edit-row-del" onclick="delEditorRow(${tableIndex},${ri})">×</td>
+  </tr>`).join('');
+}
+
+function saveEditor(){
+  /* 保存整体小结（如有） */
+  const cfg=EDITOR_CONFIG[currentEditSection];
+  if(cfg&&cfg.hasSummary){
+    const ta=document.getElementById('overviewSummaryEditor');
+    if(ta){
+      /* 纯文本：去掉任何残留的 HTML 标签后保存 */
+      DASHBOARD_DATA.overviewSummary=ta.value.replace(/<[^>]+>/g,'').trim();
+    }
+  }
+  currentEditRows.forEach((tbl,ti)=>{
+    const table=document.querySelector(`table.edit-table[data-table="${ti}"]`);
+    const inputs=table.querySelectorAll('tbody input');
+    inputs.forEach(input=>{
+      const rowIdx=parseInt(input.closest('tr').dataset.row);
+      const field=input.dataset.field;
+      let val=input.value;
+      if(val!==''&&!isNaN(val))val=Number(val);
+      tbl.rows[rowIdx][field]=val;
+    });
+    if(tbl.save)tbl.save(tbl.rows);
+  });
+  saveDataToStorage();
+  const section=currentEditSection;
+  closeModal();
+  rerenderSection(section);
+  renderKpiOverview();
+  renderOverviewSummary();
+  showToast('数据已保存并刷新','success');
+}
+
+function rerenderSection(section){
+  Object.keys(chartInstances).forEach(k=>{
+    if(k.startsWith('perf')||k.startsWith('efficiency')){try{chartInstances[k].dispose();}catch(e){}delete chartInstances[k];}
+  });
+  switch(section){
+    case 'overview':renderKpiOverview();break;
+    case 'personnel':renderPersonnel();break;
+    case 'financial':renderFinancial();break;
+    case 'capacity':renderCapacity();break;
+    case 'performance':renderPerformance();break;
+    case 'workhours':renderWorkhours();break;
+    case 'culture':renderCulture();break;
+    case 'suggest':renderSuggest();break;
+  }
+  resizeAllCharts();
+}
+
+/* ============================================================
+   导入 / 导出
+   ============================================================ */
+
+/* 导出全部数据为 Excel（多 Sheet） */
+function exportToExcel(){
+  if(typeof XLSX==='undefined'){
+    showToast('Excel 库加载失败，请检查网络','error');
+    return;
+  }
+  const wb=XLSX.utils.book_new();
+  const meta=DASHBOARD_DATA.meta||{};
+
+  /* Sheet 1：报告抬头 */
+  const metaAoa=[
+    ['外地分子公司运营季报 · 数据导出'],
+    [],
+    ['项目','内容'],
+    ['报告标题',meta.title||''],
+    ['编写人',meta.author||''],
+    ['日期',meta.date||''],
+    ['核心理念',meta.slogan||''],
+    [],
+    ['导出时间',new Date().toLocaleString('zh-CN')]
+  ];
+  const wsMeta=XLSX.utils.aoa_to_sheet(metaAoa);
+  wsMeta['!cols']=[{wch:14},{wch:60}];
+  wsMeta['!merges']=[{s:{r:0,c:0},e:{r:0,c:1}}];
+  XLSX.utils.book_append_sheet(wb,wsMeta,'报告抬头');
+
+  /* Sheet 2：核心指标总览（含 KPI 卡显示文本与整体小结） */
+  const f=DASHBOARD_DATA.financial;
+  const cards=DASHBOARD_DATA.kpiCards||[];
+  /* KPI 指标卡文本：优先使用 kpiCards 中的自定义 label，其他字段实时计算（与前端保持一致） */
+  const avgHeadcountLab=DASHBOARD_DATA.personnel&&DASHBOARD_DATA.personnel.overview&&DASHBOARD_DATA.personnel.overview.avg||0;
+  const avgPerCapitaLab=avgHeadcountLab>0?(f.efficiency.laborCost/avgHeadcountLab).toFixed(2):'—';
+  const revRateLab=f.efficiency.targets[0].target?(f.efficiency.targets[0].done/f.efficiency.targets[0].target*100).toFixed(1):0;
+  const profitRateLab=f.efficiency.targets[1].target?(f.efficiency.targets[1].done/f.efficiency.targets[1].target*100).toFixed(1):0;
+  const rateStr=(v)=>v+'%';
+  const yoyStr=(v)=>(v>=0?'+':'')+v+'%';
+  const kpiExportedCards=[
+    {label:'净合同额',rate:rateStr(f.netContract.rate),yoy:yoyStr(f.netContract.yoy),yoyType:f.netContract.yoy>=0?'up':'down',sub:'年度目标 '+f.netContract.yearTarget+'万'},
+    {label:'管理净营收',rate:rateStr(f.revenue.rate),yoy:yoyStr(f.revenue.yoy),yoyType:f.revenue.yoy>=0?'up':'down',sub:'年度目标 '+f.revenue.yearTarget+'万'},
+    {label:'管理利润',rate:rateStr(f.profit.rate),yoy:yoyStr(f.profit.yoy),yoyType:f.profit.yoy>=0?'up':'down',sub:'年度目标 '+f.profit.yearTarget+'万'},
+    {label:'人工成本',rate:'人均 '+avgPerCapitaLab+'万',yoy:'含25年终奖',yoyType:'up',sub:'月度+年终综合'},
+    {label:'元均管理净营收',rate:rateStr(revRateLab),yoy:'目标 '+f.efficiency.targets[0].target,yoyType:parseFloat(revRateLab)>=100?'up':'down',sub:'管理净营收÷人工成本'},
+    {label:'元均管理利润',rate:rateStr(profitRateLab),yoy:'目标 '+f.efficiency.targets[1].target,yoyType:parseFloat(profitRateLab)>=100?'up':'down',sub:'管理利润÷人工成本'}
+  ];
+  /* 保留用户的自定义 label（如果 kpiCards 中有） */
+  const finalKpiCards=kpiExportedCards.map((c,i)=>{
+    const userCard=cards[i]||{};
+    return{label:userCard.label||c.label,rate:c.rate,yoy:c.yoy,yoyType:c.yoyType,sub:c.sub};
+  });
+  const computeRate=(v,t)=>t?(v/t*100).toFixed(1)+'%':'—';
+  const overviewAoa=[
+    ['核心指标','年度目标','完成值','完成比%','同比%'],
+    ['净合同额',f.netContract.yearTarget,f.netContract.quarterDone,f.netContract.rate,f.netContract.yoy],
+    ['管理净营收',f.revenue.yearTarget,f.revenue.quarterDone,f.revenue.rate,f.revenue.yoy],
+    ['管理利润',f.profit.yearTarget,f.profit.quarterDone,f.profit.rate,f.profit.yoy],
+    [],
+    ['人工成本合计(万元)',f.efficiency.laborCost,'','',''],
+    [],
+    ['元效指标','目标值','完成值','完成比%','备注'],
+    ...f.efficiency.targets.map(t=>[t.name,t.target,t.done,computeRate(t.done,t.target),'']),
+    [],
+    ['KPI 指标卡显示文本（看板 6 张卡片的完整自定义文本）','','','',''],
+    ['指标名','完成比/人均','同比/副文本','箭头','底部说明'],
+    ...finalKpiCards.map(c=>[c.label||'',c.rate||'',c.yoy||'',(c.yoyType==='down'?'▼ 红':'▲ 绿'),c.sub||'']),
+    [],
+    ['整体小结（纯文本格式，可直接编辑）','','','',''],
+    [(DASHBOARD_DATA.overviewSummary||'').replace(/<[^>]+>/g,''),'','','','']
+  ];
+  const wsOverview=XLSX.utils.aoa_to_sheet(overviewAoa);
+  wsOverview['!cols']=[{wch:18},{wch:18},{wch:18},{wch:14},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,wsOverview,'核心指标总览');
+
+  /* Sheet 3：人员情况 */
+  const p=DASHBOARD_DATA.personnel;
+  const personnelAoa=[
+    ['人员总数概况','','','',''],
+    ['期初','新增','离职','调出','调入','期末','平均'],
+    [p.overview.initial,p.overview.newAdd,p.overview.resigned,p.overview.transferOut,p.overview.transferIn,p.overview.end,p.overview.avg],
+    [],
+    ['各公司人数','',''],
+    ['公司','期末人数','平均人数'],
+    ...p.companyHeadcount.map(c=>[c.company,c.end,c.avg]),
+    [],
+    ['离职人员公司分布','',''],
+    ['公司','离职人数'],
+    ...p.resignByCompany.map(c=>[c.company,c.count]),
+    [],
+    ['离职人员明细（九宫格落位 + 人员定位）','','',''],
+    ['离职人员','对应公司','九宫格落位','人员定位'],
+    ...(p.resignDetail||[]).map(r=>[r.name,r.company,r.grid,r.talent]),
+    [],
+    ['年龄分布','',''],
+    ['区间','占比%'],
+    ...p.ageDistribution.map(a=>[a.range,a.percent]),
+    [],
+    ['司龄分布','',''],
+    ['区间','人数','占比%'],
+    ...p.tenureDistribution.map(t=>[t.range,t.count,t.percent]),
+    [],
+    ['各公司平均年龄','',''],
+    ['公司','平均年龄(岁)'],
+    ...p.avgAgeByCompany.map(c=>[c.company,c.age]),
+    [],
+    ['调入人员明细','','',''],
+    ['姓名','异动类型','调出部门/公司','调入部门/公司'],
+    ...(p.transferIn||[]).map(r=>[r.name,r.type,r.from,r.to]),
+    [],
+    ['调出人员明细','','',''],
+    ['姓名','异动类型','调出部门/公司','调入部门/公司'],
+    ...(p.transferOut||[]).map(r=>[r.name,r.type,r.from,r.to])
+  ];
+  const wsPersonnel=XLSX.utils.aoa_to_sheet(personnelAoa);
+  wsPersonnel['!cols']=[{wch:18},{wch:14},{wch:18},{wch:22},{wch:22},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsPersonnel,'人员情况');
+
+  /* Sheet 4：关键经济指标 - 净合同额 */
+  const finSheets=[
+    {name:'净合同额',data:f.netContract},
+    {name:'管理净营收',data:f.revenue},
+    {name:'管理利润',data:f.profit}
+  ];
+  finSheets.forEach(s=>{
+    const aoa=[
+      [s.name+' · 完成情况','','','',''],
+      ['年度目标','完成值','完成比%','同比%',''],
+      [s.data.yearTarget,s.data.quarterDone,s.data.rate,s.data.yoy,''],
+      [],
+      ['各公司明细','','','',''],
+      ['公司','目标值(万)','完成值(万)','完成比%','去年同期(万)'],
+      ...s.data.companies.map(c=>[c.company,c.target,c.done,(c.done/c.target*100).toFixed(1)+'%',c.lastYear??'—'])
+    ];
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:16},{wch:14},{wch:14},{wch:14},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws,s.name);
+  });
+
+  /* Sheet：元效 */
+  const effAoa=[
+    ['元效完成情况','',''],
+    ['指标','目标值','完成值'],
+    ...f.efficiency.targets.map(t=>[t.name,t.target,t.done]),
+    [],
+    ['各公司元效明细','','','','','','','','',''],
+    ['公司','管理净营收(万)','管理利润(万)','人工成本(万)','元均净营收','元均利润','元均净营收目标值','元均净利润目标值','元均净营收完成比','元均净利润完成比'],
+    ...f.efficiency.companies.map(c=>{var rt=c.revenueTarget||((f.efficiency.targets[0]&&f.efficiency.targets[0].target)||0);var pt=c.profitTarget||((f.efficiency.targets[1]&&f.efficiency.targets[1].target)||0);return[c.company,c.revenue,c.profit,c.cost,c.revenuePer,c.profitPer,rt,pt,rt?(c.revenuePer/rt*100).toFixed(1)+'%':'—',pt?(c.profitPer/pt*100).toFixed(1)+'%':'—']})
+  ];
+  const wsEff=XLSX.utils.aoa_to_sheet(effAoa);
+  wsEff['!cols']=[{wch:14},{wch:12},{wch:12},{wch:12},{wch:14},{wch:14},{wch:18},{wch:18},{wch:18},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsEff,'元效');
+
+  /* Sheet：人工成本 */
+  const laborAoa=[
+    ['人工成本明细','','','','',''],
+    ['公司','平均人数','月度成本(万)','年终奖(万)','合计(万)','人均成本(万)'],
+    ...f.laborCost.map(c=>[c.company,c.avgCount,c.monthly,c.yearBonus,c.total,c.perCapita])
+  ];
+  const wsLabor=XLSX.utils.aoa_to_sheet(laborAoa);
+  wsLabor['!cols']=[{wch:16},{wch:12},{wch:14},{wch:14},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsLabor,'人工成本');
+
+  /* Sheet：产能情况 */
+  const cap=DASHBOARD_DATA.capacity;
+  const capAoa=[
+    ['产能情况','','',''],
+    ['公司','实际产能','标准产能','转化率%'],
+    ...cap.companies.map(c=>[c.company,c.actual,c.standard,c.rate])
+  ];
+  const wsCap=XLSX.utils.aoa_to_sheet(capAoa);
+  wsCap['!cols']=[{wch:16},{wch:14},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,wsCap,'产能情况');
+
+  /* Sheet：绩效奖金 */
+  const perf=DASHBOARD_DATA.performance;
+  const perfAoa=[['绩效奖金（按公司分组）']];
+  perf.groups.forEach(g=>{
+    perfAoa.push([]);
+    perfAoa.push([g.company+' · '+(g.totalDeduct<0?'激励总额：'+Math.abs(g.totalDeduct):'扣减总额：'+g.totalDeduct)+' 元','产值(万)','奖金变化比']);
+    g.people.forEach(p=>{
+      perfAoa.push([p.name,p.value,(p.bonus*100).toFixed(1)+'%']);
+    });
+  });
+  const wsPerf=XLSX.utils.aoa_to_sheet(perfAoa);
+  wsPerf['!cols']=[{wch:18},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsPerf,'绩效奖金');
+
+  /* Sheet：工时闭环率 */
+  const w=DASHBOARD_DATA.workhours;
+  const workAoa=[
+    ['各公司工时情况','','','','','','',''],
+    ['公司','人数','应出勤','报工','项目工时','闭环率%','有效闭环率%'],
+    ...w.companies.map(c=>[c.company,c.count,c.should,c.reported,c.project,c.closeRate,c.validRate]),
+    [],
+    ['低报工人员名单','','',''],
+    ['姓名','部门','闭环率%','有效闭环率%'],
+    ...w.lowReport.map(r=>[r.name,r.dept,r.closeRate,r.validRate])
+  ];
+  const wsWork=XLSX.utils.aoa_to_sheet(workAoa);
+  wsWork['!cols']=[{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsWork,'工时闭环');
+
+  /* Sheet：企业文化 */
+  const cul=DASHBOARD_DATA.culture;
+  const culAoa=[
+    ['企业文化积分明细','','',''],
+    ['姓名','公司','积分','原因'],
+    ...cul.scores.map(s=>[s.name,s.company,s.score,s.reason||''])
+  ];
+  const wsCul=XLSX.utils.aoa_to_sheet(culAoa);
+  wsCul['!cols']=[{wch:14},{wch:14},{wch:8},{wch:50}];
+  XLSX.utils.book_append_sheet(wb,wsCul,'企业文化');
+
+  /* Sheet：问题与建议 */
+  const sg=DASHBOARD_DATA.suggest;
+  const sgAoa=[['问题与改进建议']];
+  sg.forEach((item,i)=>{
+    sgAoa.push([]);
+    sgAoa.push([(i+1)+'. '+item.topic]);
+    sgAoa.push(['【存在问题】']);
+    item.problems.forEach(p=>sgAoa.push([p]));
+    sgAoa.push(['【改进建议】']);
+    item.solutions.forEach(p=>sgAoa.push([p]));
+  });
+  const wsSg=XLSX.utils.aoa_to_sheet(sgAoa);
+  wsSg['!cols']=[{wch:90}];
+  wsSg['!merges']=sgAoa.map((_,i)=>({s:{r:i,c:0},e:{r:i,c:0}}));
+  XLSX.utils.book_append_sheet(wb,wsSg,'问题与建议');
+
+  /* 生成文件名：外地分子公司三季度运营季报_2026-10-27.xlsx */
+  const date=new Date();
+  const ymd=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+  const safeTitle=(meta.title||'运营季报').replace(/[\\/:*?"<>|]/g,'').slice(0,40);
+  const filename=safeTitle+'_'+ymd+'.xlsx';
+  XLSX.writeFile(wb,filename);
+  showToast('已导出 Excel：'+filename+'（含全量数据）','success');
+}
+
+function exportAllData(format){
+  if(format==='json'){
+    const blob=new Blob([JSON.stringify(DASHBOARD_DATA,null,2)],{type:'application/json'});
+    const safeTitle=(DASHBOARD_DATA.meta?.title||'运营季报').replace(/[\\/:*?"<>|]/g,'').slice(0,40);
+    downloadBlob(blob,safeTitle+'_数据.json');
+    showToast('已导出全部数据(JSON)','success');
+  }
+}
+
+/* 生成最终版HTML：将当前所有数据嵌入HTML文件，他人打开即看到最终数据 */
+function exportFinalHTML(){
+  try{
+    /* 获取当前页面完整HTML（包含所有 script 标签原始内容） */
+    var html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+    /* 找到 DASHBOARD_DATA 声明的起始位置 */
+    var startMarker='const DASHBOARD_DATA={';
+    var startIdx=html.indexOf(startMarker);
+    if(startIdx<0){startMarker='const DASHBOARD_DATA = {';startIdx=html.indexOf(startMarker);}
+    if(startIdx<0){showToast('未找到DASHBOARD_DATA声明','error');return;}
+    /* 用花括号计数法找到对象结束位置（比正则更可靠） */
+    var braceCount=0;
+    var endIdx=-1;
+    for(var i=startIdx+startMarker.length-1;i<html.length;i++){
+      if(html[i]==='{')braceCount++;
+      else if(html[i]==='}')braceCount--;
+      if(braceCount===0){
+        endIdx=i+1;
+        if(html[endIdx]===';')endIdx++;
+        break;
+      }
+    }
+    if(endIdx<0){showToast('未找到DASHBOARD_DATA结束位置','error');return;}
+    /* 用当前实时数据替换默认数据 */
+    var dataStr='const DASHBOARD_DATA='+JSON.stringify(DASHBOARD_DATA,null,2)+';';
+    var finalHtml=html.substring(0,startIdx)+dataStr+html.substring(endIdx);
+    /* 禁用 localStorage 加载（最终版数据已嵌入，不需要从本地读取） */
+    finalHtml=finalHtml.replace(/const restored=loadDataFromStorage\(\);/g,'var restored=false;');
+    finalHtml=finalHtml.replace(/ensureDataIntegrity\(\);/g,'/* ensureDataIntegrity skipped for final version */');
+    /* 下载 */
+    var blob=new Blob([finalHtml],{type:'text/html;charset=utf-8'});
+    var safeTitle=(DASHBOARD_DATA.meta&&DASHBOARD_DATA.meta.title||'运营季报').replace(/[\\/:*?"<>|]/g,'').slice(0,40);
+    downloadBlob(blob,safeTitle+'_最终版.html');
+    showToast('已生成最终版HTML（含全部当前数据），可分享给他人','success');
+  }catch(err){
+    console.error(err);
+    showToast('生成最终版失败：'+err.message+'，请改用导出JSON','error');
+  }
+}
+
+function exportSection(section,format){
+  if(format!=='csv')return;
+  const cfg=EDITOR_CONFIG[section];
+  let csv='\ufeff';
+  cfg.tables.forEach(tbl=>{
+    csv+=tbl.name+'\n';
+    csv+=tbl.headers.join(',')+'\n';
+    tbl.data().forEach(r=>{
+      csv+=tbl.fields.map(f=>{let v=(r[f]??'').toString();if(v.includes(',')||v.includes('"'))v='"'+v.replace(/"/g,'""')+'"';return v;}).join(',')+'\n';
+    });
+    csv+='\n';
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  downloadBlob(blob,`${section}_数据.csv`);
+  showToast('已导出 CSV','success');
+}
+
+function downloadBlob(blob,filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importAllData(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const fileName=file.name.toLowerCase();
+  if(fileName.endsWith('.json')){
+    importFromJSON(file,event);
+  }else if(fileName.endsWith('.xlsx')||fileName.endsWith('.xls')){
+    importFromExcel(file,event);
+  }else{
+    showToast('不支持的文件格式，请选择 .json 或 .xlsx 文件','error');
+    event.target.value='';
+  }
+}
+
+/* 导入 JSON 文件 */
+function importFromJSON(file,event){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const imported=JSON.parse(e.target.result);
+      applyImportedData(imported);
+      showToast('JSON 导入成功，已刷新看板','success');
+    }catch(err){
+      console.error(err);
+      showToast('JSON 导入失败：'+err.message,'error');
+    }
+    event.target.value='';
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+/* 导入 Excel 文件（按 Sheet 解析，自动更新看板内容） */
+function importFromExcel(file,event){
+  if(typeof XLSX==='undefined'){
+    showToast('Excel 库未加载，请检查网络','error');
+    event.target.value='';
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      importFromExcelSheets(wb);
+      saveDataToStorage();
+      renderHeader();
+      renderAll();
+      showToast('Excel 导入成功，已自动更新看板内容','success');
+    }catch(err){
+      console.error(err);
+      showToast('Excel 导入失败：'+err.message,'error');
+    }
+    event.target.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* 将导入的数据应用到 DASHBOARD_DATA */
+function applyImportedData(imported){
+  if(imported.meta)DASHBOARD_DATA.meta=imported.meta;
+  if(imported.overviewSummary!==undefined)DASHBOARD_DATA.overviewSummary=imported.overviewSummary;
+  if(imported.kpiCards)DASHBOARD_DATA.kpiCards=imported.kpiCards;
+  if(imported.personnel)DASHBOARD_DATA.personnel=imported.personnel;
+  if(imported.financial)DASHBOARD_DATA.financial=imported.financial;
+  if(imported.capacity)DASHBOARD_DATA.capacity=imported.capacity;
+  if(imported.performance)DASHBOARD_DATA.performance=imported.performance;
+  if(imported.workhours)DASHBOARD_DATA.workhours=imported.workhours;
+  if(imported.culture)DASHBOARD_DATA.culture=imported.culture;
+  if(imported.suggest)DASHBOARD_DATA.suggest=imported.suggest;
+  saveDataToStorage();
+  renderAll();
+  renderHeader();
+}
+
+/* 按 Sheet 解析 Excel（兼容只含部分 Sheet 的 Excel） */
+function importFromExcelSheets(wb){
+  /* 防御性初始化：确保所有数组字段存在（兼容旧 localStorage 数据） */
+  if(!DASHBOARD_DATA.meta)DASHBOARD_DATA.meta={};
+  if(!DASHBOARD_DATA.personnel)DASHBOARD_DATA.personnel={};
+  if(!DASHBOARD_DATA.personnel.overview)DASHBOARD_DATA.personnel.overview={initial:137,newAdd:4,resigned:18,transferOut:8,transferIn:9,end:124,avg:124};
+  if(!DASHBOARD_DATA.personnel.companyHeadcount)DASHBOARD_DATA.personnel.companyHeadcount=[];
+  if(!DASHBOARD_DATA.personnel.resignByCompany)DASHBOARD_DATA.personnel.resignByCompany=[];
+  if(!DASHBOARD_DATA.personnel.resignDetail)DASHBOARD_DATA.personnel.resignDetail=[];
+  if(!DASHBOARD_DATA.personnel.ageDistribution)DASHBOARD_DATA.personnel.ageDistribution=[];
+  if(!DASHBOARD_DATA.personnel.tenureDistribution)DASHBOARD_DATA.personnel.tenureDistribution=[];
+  if(!DASHBOARD_DATA.personnel.avgAgeByCompany)DASHBOARD_DATA.personnel.avgAgeByCompany=[];
+  if(!DASHBOARD_DATA.personnel.transferIn)DASHBOARD_DATA.personnel.transferIn=[];
+  if(!DASHBOARD_DATA.personnel.transferOut)DASHBOARD_DATA.personnel.transferOut=[];
+  if(!DASHBOARD_DATA.financial)DASHBOARD_DATA.financial={};
+  if(!DASHBOARD_DATA.financial.netContract)DASHBOARD_DATA.financial.netContract={};
+  if(!DASHBOARD_DATA.financial.revenue)DASHBOARD_DATA.financial.revenue={};
+  if(!DASHBOARD_DATA.financial.profit)DASHBOARD_DATA.financial.profit={};
+  if(!DASHBOARD_DATA.financial.efficiency)DASHBOARD_DATA.financial.efficiency={};
+  if(!DASHBOARD_DATA.financial.efficiency.targets)DASHBOARD_DATA.financial.efficiency.targets=[];
+  if(!DASHBOARD_DATA.financial.efficiency.companies)DASHBOARD_DATA.financial.efficiency.companies=[];
+  if(!DASHBOARD_DATA.financial.laborCost)DASHBOARD_DATA.financial.laborCost=[];
+  if(!DASHBOARD_DATA.capacity)DASHBOARD_DATA.capacity={};
+  if(!DASHBOARD_DATA.capacity.companies)DASHBOARD_DATA.capacity.companies=[];
+  if(!DASHBOARD_DATA.performance)DASHBOARD_DATA.performance={};
+  if(!DASHBOARD_DATA.performance.groups)DASHBOARD_DATA.performance.groups=[];
+  if(!DASHBOARD_DATA.workhours)DASHBOARD_DATA.workhours={};
+  if(!DASHBOARD_DATA.workhours.companies)DASHBOARD_DATA.workhours.companies=[];
+  if(!DASHBOARD_DATA.workhours.lowReport)DASHBOARD_DATA.workhours.lowReport=[];
+  if(!DASHBOARD_DATA.culture)DASHBOARD_DATA.culture={};
+  if(!DASHBOARD_DATA.culture.scores)DASHBOARD_DATA.culture.scores=[];
+  if(!DASHBOARD_DATA.suggest)DASHBOARD_DATA.suggest=[];
+  if(!DASHBOARD_DATA.kpiCards)DASHBOARD_DATA.kpiCards=[];
+
+  /* 智能赋值：仅在 Excel 中有有效值（不为空且非 0）时覆盖现有值，避免误清空 */
+  const smartSet=(currentVal,excelVal)=>{
+    if(excelVal===''||excelVal===null||excelVal===undefined)return currentVal;
+    const num=Number(excelVal);
+    if(isNaN(num))return currentVal;
+    if(num===0&&currentVal&&Number(currentVal)!==0)return currentVal;  // 保护：Excel 是 0 但现有值非 0 → 保留
+    return num;
+  };
+  const smartSetStr=(currentVal,excelVal)=>{
+    if(excelVal===''||excelVal===null||excelVal===undefined)return currentVal;
+    return String(excelVal);
+  };
+
+  /* 报告抬头 */
+  const metaSheet=wb.Sheets['报告抬头'];
+  if(metaSheet){
+    const aoa=XLSX.utils.sheet_to_json(metaSheet,{header:1,blankrows:false,defval:''});
+    for(const row of aoa){
+      if(row[0]==='报告标题')DASHBOARD_DATA.meta.title=row[1]||'';
+      else if(row[0]==='编写人')DASHBOARD_DATA.meta.author=row[1]||'';
+      else if(row[0]==='日期')DASHBOARD_DATA.meta.date=row[1]||'';
+      else if(row[0]==='核心理念')DASHBOARD_DATA.meta.slogan=row[1]||'';
+    }
+  }
+
+  /* 核心指标总览（含 KPI 卡文本与整体小结） */
+  const ovSheet=wb.Sheets['核心指标总览'];
+  if(ovSheet){
+    const aoa=XLSX.utils.sheet_to_json(ovSheet,{header:1,blankrows:false,defval:''});
+    let kpiSection=false;
+    let summarySection=false;
+    for(let i=0;i<aoa.length;i++){
+      const row=aoa[i]||[];
+      const label=(row[0]||'').toString().trim();
+      if(label==='净合同额'&&row.length>=5){
+        DASHBOARD_DATA.financial.netContract.yearTarget=smartSet(DASHBOARD_DATA.financial.netContract.yearTarget,row[1]);
+        DASHBOARD_DATA.financial.netContract.quarterDone=smartSet(DASHBOARD_DATA.financial.netContract.quarterDone,row[2]);
+        DASHBOARD_DATA.financial.netContract.rate=smartSet(DASHBOARD_DATA.financial.netContract.rate,row[3]);
+        DASHBOARD_DATA.financial.netContract.yoy=smartSet(DASHBOARD_DATA.financial.netContract.yoy,row[4]);
+      }else if(label==='管理净营收'&&row.length>=5){
+        DASHBOARD_DATA.financial.revenue.yearTarget=smartSet(DASHBOARD_DATA.financial.revenue.yearTarget,row[1]);
+        DASHBOARD_DATA.financial.revenue.quarterDone=smartSet(DASHBOARD_DATA.financial.revenue.quarterDone,row[2]);
+        DASHBOARD_DATA.financial.revenue.rate=smartSet(DASHBOARD_DATA.financial.revenue.rate,row[3]);
+        DASHBOARD_DATA.financial.revenue.yoy=smartSet(DASHBOARD_DATA.financial.revenue.yoy,row[4]);
+      }else if(label==='管理利润'&&row.length>=5){
+        DASHBOARD_DATA.financial.profit.yearTarget=smartSet(DASHBOARD_DATA.financial.profit.yearTarget,row[1]);
+        DASHBOARD_DATA.financial.profit.quarterDone=smartSet(DASHBOARD_DATA.financial.profit.quarterDone,row[2]);
+        DASHBOARD_DATA.financial.profit.rate=smartSet(DASHBOARD_DATA.financial.profit.rate,row[3]);
+        DASHBOARD_DATA.financial.profit.yoy=smartSet(DASHBOARD_DATA.financial.profit.yoy,row[4]);
+      }else if(label.indexOf('人工成本合计')===0){
+        DASHBOARD_DATA.financial.efficiency.laborCost=smartSet(DASHBOARD_DATA.financial.efficiency.laborCost,row[1]);
+      }else if(label==='元均管理净营收'||label==='元均管理利润'){
+        const idx=label==='元均管理净营收'?0:1;
+        if(DASHBOARD_DATA.financial.efficiency.targets[idx]){
+          DASHBOARD_DATA.financial.efficiency.targets[idx].target=smartSet(DASHBOARD_DATA.financial.efficiency.targets[idx].target,row[1]);
+          DASHBOARD_DATA.financial.efficiency.targets[idx].done=smartSet(DASHBOARD_DATA.financial.efficiency.targets[idx].done,row[2]);
+        }
+      }else if(label.indexOf('KPI 指标卡显示文本')===0){
+        kpiSection=true;summarySection=false;
+      }else if(label.indexOf('整体小结')===0){
+        kpiSection=false;summarySection=true;
+      }else if(kpiSection&&label&&label!=='指标名'){
+        const idx=DASHBOARD_DATA.kpiCards.findIndex(c=>c.label===label);
+        if(idx>=0){
+          DASHBOARD_DATA.kpiCards[idx].rate=smartSetStr(DASHBOARD_DATA.kpiCards[idx].rate,row[1]);
+          DASHBOARD_DATA.kpiCards[idx].yoy=smartSetStr(DASHBOARD_DATA.kpiCards[idx].yoy,row[2]);
+          DASHBOARD_DATA.kpiCards[idx].yoyType=(row[3]||'').toString().indexOf('红')>-1?'down':'up';
+          DASHBOARD_DATA.kpiCards[idx].sub=smartSetStr(DASHBOARD_DATA.kpiCards[idx].sub,row[4]);
+        }
+      }else if(summarySection&&label&&label.indexOf('小结')<0){
+        DASHBOARD_DATA.overviewSummary=row[0];
+      }
+    }
+  }
+
+  /* 人员情况 */
+  const pSheet=wb.Sheets['人员情况'];
+  if(pSheet){
+    const aoa=XLSX.utils.sheet_to_json(pSheet,{header:1,blankrows:false,defval:''});
+    let section='';
+    const sectionEntered={};
+    for(const row of aoa){
+      const label=(row[0]||'').toString().trim();
+      if(label==='人员总数概况'){section='overview';continue;}
+      if(label==='各公司人数'){section='companyHeadcount';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.companyHeadcount=[];sectionEntered[section]=true;}continue;}
+      if(label==='离职人员公司分布'){section='resignByCompany';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.resignByCompany=[];sectionEntered[section]=true;}continue;}
+      if(label.indexOf('离职人员明细')===0){section='resignDetail';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.resignDetail=[];sectionEntered[section]=true;}continue;}
+      if(label==='年龄分布'){section='ageDistribution';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.ageDistribution=[];sectionEntered[section]=true;}continue;}
+      if(label==='司龄分布'){section='tenureDistribution';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.tenureDistribution=[];sectionEntered[section]=true;}continue;}
+      if(label==='各公司平均年龄'){section='avgAgeByCompany';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.avgAgeByCompany=[];sectionEntered[section]=true;}continue;}
+      if(label==='调入人员明细'){section='transferIn';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.transferIn=[];sectionEntered[section]=true;}continue;}
+      if(label==='调出人员明细'){section='transferOut';if(!sectionEntered[section]){DASHBOARD_DATA.personnel.transferOut=[];sectionEntered[section]=true;}continue;}
+
+      if(section==='overview'&&label==='期初'){
+        /* 这是表头行，跳过 */
+        continue;
+      }else if(section==='overview'&&!isNaN(Number(row[0]))){
+        /* 数据行：第 1 列是数字 */
+        DASHBOARD_DATA.personnel.overview={
+          initial:smartSet(DASHBOARD_DATA.personnel.overview.initial,row[0]),
+          newAdd:smartSet(DASHBOARD_DATA.personnel.overview.newAdd,row[1]),
+          resigned:smartSet(DASHBOARD_DATA.personnel.overview.resigned,row[2]),
+          transferOut:smartSet(DASHBOARD_DATA.personnel.overview.transferOut,row[3]),
+          transferIn:smartSet(DASHBOARD_DATA.personnel.overview.transferIn,row[4]),
+          end:smartSet(DASHBOARD_DATA.personnel.overview.end,row[5]),
+          avg:smartSet(DASHBOARD_DATA.personnel.overview.avg,row[6])
+        };
+      }else if(section==='companyHeadcount'&&label&&label!=='公司'){
+        const existing=DASHBOARD_DATA.personnel.companyHeadcount.findIndex(c=>c.company===label);
+        const val={company:label,end:smartSet(0,row[1]),avg:smartSet(0,row[2])};
+        if(existing>=0)DASHBOARD_DATA.personnel.companyHeadcount[existing]=val;
+        else DASHBOARD_DATA.personnel.companyHeadcount.push(val);
+      }else if(section==='resignByCompany'&&label&&label!=='公司'){
+        const existing=DASHBOARD_DATA.personnel.resignByCompany.findIndex(c=>c.company===label);
+        const val={company:label,count:smartSet(0,row[1])};
+        if(existing>=0)DASHBOARD_DATA.personnel.resignByCompany[existing]=val;
+        else DASHBOARD_DATA.personnel.resignByCompany.push(val);
+      }else if(section==='resignDetail'&&label&&label!=='离职人员'){
+        DASHBOARD_DATA.personnel.resignDetail.push({name:row[0],company:row[1],grid:row[2],talent:row[3]});
+      }else if(section==='ageDistribution'&&label&&label!=='区间'){
+        const existing=DASHBOARD_DATA.personnel.ageDistribution.findIndex(a=>a.range===label);
+        const val={range:label,percent:Number(row[1])||0};
+        if(existing>=0)DASHBOARD_DATA.personnel.ageDistribution[existing]=val;
+        else DASHBOARD_DATA.personnel.ageDistribution.push(val);
+      }else if(section==='tenureDistribution'&&label&&label!=='区间'){
+        const existing=DASHBOARD_DATA.personnel.tenureDistribution.findIndex(t=>t.range===label);
+        const val={range:label,count:Number(row[1])||0,percent:Number(row[2])||0};
+        if(existing>=0)DASHBOARD_DATA.personnel.tenureDistribution[existing]=val;
+        else DASHBOARD_DATA.personnel.tenureDistribution.push(val);
+      }else if(section==='avgAgeByCompany'&&label&&label!=='公司'){
+        const existing=DASHBOARD_DATA.personnel.avgAgeByCompany.findIndex(c=>c.company===label);
+        const val={company:label,age:Number(row[1])||0};
+        if(existing>=0)DASHBOARD_DATA.personnel.avgAgeByCompany[existing]=val;
+        else DASHBOARD_DATA.personnel.avgAgeByCompany.push(val);
+      }else if(section==='transferIn'&&label&&label!=='姓名'){
+        DASHBOARD_DATA.personnel.transferIn.push({name:row[0],type:row[1],from:row[2],to:row[3]});
+      }else if(section==='transferOut'&&label&&label!=='姓名'){
+        DASHBOARD_DATA.personnel.transferOut.push({name:row[0],type:row[1],from:row[2],to:row[3]});
+      }
+    }
+  }
+
+  /* 净合同额 / 管理净营收 / 管理利润 */
+  const finSheets=[
+    {sheet:'净合同额',key:'netContract'},{'sheet':'管理净营收',key:'revenue'},{sheet:'管理利润',key:'profit'}
+  ];
+  finSheets.forEach(cfg=>{
+    const sh=wb.Sheets[cfg.sheet];
+    if(!sh)return;
+    const aoa=XLSX.utils.sheet_to_json(sh,{header:1,blankrows:false,defval:''});
+    let inCompanies=false;
+    const companies=[];
+    for(const row of aoa){
+      const label=(row[0]||'').toString().trim();
+      if(label==='公司'){inCompanies=true;continue;}
+      if(inCompanies&&label){
+        /* 列顺序：公司(0) / 目标值(1) / 完成值(2) / 完成比%(3) / 去年同期(4) */
+        const lastYearRaw=row[4];
+        const lastYearVal=(lastYearRaw==='—'||lastYearRaw===''||lastYearRaw===undefined)?0:Number(lastYearRaw);
+        companies.push({
+          company:label,
+          target:Number(row[1])||0,
+          done:Number(row[2])||0,
+          lastYear:isNaN(lastYearVal)?0:lastYearVal
+        });
+      }
+    }
+    if(companies.length>0){
+      DASHBOARD_DATA.financial[cfg.key].companies=companies;
+    }
+  });
+
+  /* 元效（各公司） */
+  const effSheet=wb.Sheets['元效'];
+  if(effSheet){
+    const aoa=XLSX.utils.sheet_to_json(effSheet,{header:1,blankrows:false,defval:''});
+    let inCompanies=false;
+    const companies=[];
+    for(const row of aoa){
+      const label=(row[0]||'').toString().trim();
+      if(label==='公司'){inCompanies=true;continue;}
+      if(inCompanies&&label){
+        companies.push({company:label,revenue:Number(row[1])||0,profit:Number(row[2])||0,cost:Number(row[3])||0,revenuePer:Number(row[4])||0,profitPer:Number(row[5])||0,revenueTarget:(row[6]!==undefined&&row[6]!=='')?Number(row[6]):(f.efficiency.targets[0]&&f.efficiency.targets[0].target)||0,profitTarget:(row[7]!==undefined&&row[7]!=='')?Number(row[7]):(f.efficiency.targets[1]&&f.efficiency.targets[1].target)||0});
+      }
+    }
+    if(companies.length>0)DASHBOARD_DATA.financial.efficiency.companies=companies;
+  }
+
+  /* 人工成本 */
+  const laborSheet=wb.Sheets['人工成本'];
+  if(laborSheet){
+    const aoa=XLSX.utils.sheet_to_json(laborSheet,{header:1,blankrows:false,defval:''});
+    let inCompanies=false;
+    const companies=[];
+    for(const row of aoa){
+      const label=(row[0]||'').toString().trim();
+      if(label==='公司'){inCompanies=true;continue;}
+      if(inCompanies&&label){
+        companies.push({company:label,avgCount:Number(row[1])||0,monthly:Number(row[2])||0,yearBonus:Number(row[3])||0,total:Number(row[4])||0,perCapita:Number(row[5])||0});
+      }
+    }
+    if(companies.length>0)DASHBOARD_DATA.financial.laborCost=companies;
+  }
+
+  /* 产能情况 */
+  const capSheet=wb.Sheets['产能情况'];
+  if(capSheet){
+    const aoa=XLSX.utils.sheet_to_json(capSheet,{header:1,blankrows:false,defval:''});
+    let inCompanies=false;
+    const companies=[];
+    for(const row of aoa){
+      const label=(row[0]||'').toString().trim();
+      if(label==='公司'){inCompanies=true;continue;}
+      if(inCompanies&&label){
+        companies.push({company:label,actual:Number(row[1])||0,standard:Number(row[2])||0,rate:Number(row[3])||0});
+      }
+    }
+    if(companies.length>0)DASHBOARD_DATA.capacity.companies=companies;
+  }
+
+  /* 绩效奖金 */
+  const perfSheet=wb.Sheets['绩效奖金'];
+  if(perfSheet){
+    const aoa=XLSX.utils.sheet_to_json(perfSheet,{header:1,blankrows:false,defval:''});
+    const groups=[];
+    let current=null;
+    for(const row of aoa){
+      const c0=(row[0]||'').toString();
+      /* 匹配 "公司名 · 扣减总额：xxx 元" 或 "公司名 · 激励总额：xxx 元"（激励记为负值） */
+      const m=c0.match(/^(.+?)\s*·\s*(扣减|激励)总额：\s*([\d.]+)\s*元/);
+      if(m){
+        if(current)groups.push(current);
+        current={company:m[1].trim(),totalDeduct:(m[2]==='激励'?-1:1)*(Number(m[3])||0),people:[]};
+        continue;
+      }
+      if(current&&row[0]&&row[0]!=='产值(万)'&&row[0]!=='姓名'){
+        if(row[0]&&!isNaN(parseFloat(row[2]))){
+          current.people.push({name:row[0],value:Number(row[1])||0,bonus:(Number(String(row[2]).replace('%',''))||0)/100});
+        }
+      }
+    }
+    if(current)groups.push(current);
+    if(groups.length>0)DASHBOARD_DATA.performance.groups=groups;
+  }
+
+  /* 工时闭环 */
+  const wSheet=wb.Sheets['工时闭环'];
+  if(wSheet){
+    const aoa=XLSX.utils.sheet_to_json(wSheet,{header:1,blankrows:false,defval:''});
+    let section='companies';
+    const companies=[];
+    const lowReport=[];
+    for(const row of aoa){
+      const label=(row[0]||'').toString().trim();
+      if(label.indexOf('低报工人员名单')===0){section='lowReport';continue;}
+      if(label==='公司'&&section==='companies')continue;
+      if(label==='姓名'&&section==='lowReport')continue;
+      if(!label)continue;
+      if(section==='companies'){
+        companies.push({company:label,count:Number(row[1])||0,should:Number(row[2])||0,reported:Number(row[3])||0,project:Number(row[4])||0,closeRate:Number(row[5])||0,validRate:Number(row[6])||0});
+      }else if(section==='lowReport'){
+        lowReport.push({name:row[0],dept:row[1],closeRate:Number(row[2])||0,validRate:Number(row[3])||0});
+      }
+    }
+    if(companies.length>0)DASHBOARD_DATA.workhours.companies=companies;
+    if(lowReport.length>0)DASHBOARD_DATA.workhours.lowReport=lowReport;
+  }
+
+  /* 企业文化 */
+  const culSheet=wb.Sheets['企业文化'];
+  if(culSheet){
+    const aoa=XLSX.utils.sheet_to_json(culSheet,{header:1,blankrows:false,defval:''});
+    const scores=[];
+    for(const row of aoa){
+      const label=(row[0]||'').toString().trim();
+      if(label==='姓名')continue;
+      if(!label)continue;
+      scores.push({name:row[0],company:row[1],score:Number(row[2])||0,reason:row[3]||''});
+    }
+    if(scores.length>0)DASHBOARD_DATA.culture.scores=scores;
+  }
+
+  /* 问题与建议 */
+  const sgSheet=wb.Sheets['问题与建议'];
+  if(sgSheet){
+    const aoa=XLSX.utils.sheet_to_json(sgSheet,{header:1,blankrows:false,defval:''});
+    const suggest=[];
+    let current=null;
+    let sectionProblems=true;
+    for(const row of aoa){
+      const c0=(row[0]||'').toString().trim();
+      if(!c0)continue;
+      /* 匹配主题行：数字 + . + 主题，如 "1. 经济指标、产能相关" */
+      const tm=c0.match(/^(\d+)\.\s*(.+)$/);
+      if(tm){
+        if(current)suggest.push(current);
+        current={topic:tm[2].trim(),problems:[],solutions:[]};
+        sectionProblems=true;
+        continue;
+      }
+      if(c0==='【存在问题】'){sectionProblems=true;continue;}
+      if(c0==='【改进建议】'){sectionProblems=false;continue;}
+      if(current&&c0!=='问题与改进建议'){
+        if(sectionProblems)current.problems.push(c0);
+        else current.solutions.push(c0);
+      }
+    }
+    if(current)suggest.push(current);
+    if(suggest.length>0)DASHBOARD_DATA.suggest=suggest;
+  }
+}
+
+/* ============================================================
+   Toast / 导航 / 自适应
+   ============================================================ */
+let toastTimer=null;
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(type||'')+' show';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+function filterNav(keyword){
+  keyword=keyword.trim().toLowerCase();
+  document.querySelectorAll('.sidebar-nav a').forEach(a=>{
+    const text=a.querySelector('span:not(.icon)').textContent.toLowerCase();
+    a.style.display=(!keyword||text.includes(keyword))?'flex':'none';
+  });
+}
+
+function initNav(){
+  const navLinks=document.querySelectorAll('.sidebar-nav a');
+  const sections=document.querySelectorAll('section.section');
+  window.addEventListener('scroll',()=>{
+    const scrollY=window.scrollY;
+    document.getElementById('backTop').classList.toggle('show',scrollY>400);
+    let current='sec-overview';
+    sections.forEach(sec=>{if(scrollY+140>=sec.offsetTop)current=sec.id;});
+    navLinks.forEach(a=>a.classList.toggle('active',a.dataset.target===current));
+  });
+  // 点击导航平滑滚动
+  navLinks.forEach(a=>{
+    a.addEventListener('click',e=>{
+      e.preventDefault();
+      const target=document.getElementById(a.dataset.target);
+      if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  });
+}
+
+function resizeAllCharts(){
+  Object.values(chartInstances).forEach(c=>{try{c.resize();}catch(e){}});
+}
+
+function renderAll(){
+  renderKpiOverview();
+  renderPersonnel();
+  renderFinancial();
+  renderCapacity();
+  renderPerformance();
+  renderWorkhours();
+  renderCulture();
+  renderSuggest();
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  ensureDataIntegrity();
+  const restored=loadDataFromStorage();
+  ensureDataIntegrity();
+  renderHeader();
+  renderAll();
+  initNav();
+  window.addEventListener('resize',resizeAllCharts);
+  document.getElementById('modalMask').addEventListener('click',e=>{
+    if(e.target.id==='modalMask')closeModal();
+  });
+  if(restored){
+    setTimeout(()=>showToast('已加载上次保存的编辑内容（本地）','success'),200);
+  }
+});
+</script>
+</body>
+</html>
